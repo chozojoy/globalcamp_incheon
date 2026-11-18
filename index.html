@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 뉴스1 K-브랜드 글로벌 캠프 in 인천 대시보드</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Noto Sans KR"', 'sans-serif'] },
+                    colors: {
+                        primary: '#3B82F6', secondary: '#10B981',
+                        groupA: '#EF4444', groupB: '#F59E0B', groupC: '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideInRight 0.3s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+        
+        .tab-active { border-bottom: 2px solid #3B82F6; color: #1D4ED8; font-weight: bold; }
+        .tab-inactive { color: #6B7280; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #374151; border-bottom: 2px solid #D1D5DB; }
+
+        @media print {
+            @page { margin: 10mm; }
+            html, body, main, #content-area {
+                height: auto !important; min-height: auto !important; overflow: visible !important;
+                position: static !important; display: block !important; width: 100% !important;
+                margin: 0 !important; padding: 0 !important; background: white !important;
+            }
+            aside, header, #login-screen, #sidebar-overlay, #toast-container, 
+            #message-modal, #password-modal, #input-modal, #applicant-modal, .print-hide {
+                display: none !important;
+            }
+            .overflow-x-auto, .overflow-y-auto, .overflow-auto, .flex-1 {
+                overflow: visible !important; max-height: none !important; height: auto !important; display: block !important;
+            }
+            table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto; }
+            tr { page-break-inside: avoid; }
+            th, td { border: 1px solid #e5e7eb !important; padding: 10px !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+        .sortable-header { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .sortable-header:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Login Modal -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-900 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-teal-500"></div>
+            <div class="w-16 h-16 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner border border-teal-100">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <span class="inline-block bg-teal-50 text-teal-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-teal-200 mb-2">ALL WAYS INCHEON · 11.24~25</span>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">K-브랜드 글로벌 캠프 in 인천</h2>
+            <p class="text-gray-500 text-sm mb-6">운영진 연락처를 입력해주세요.<br><span class="text-xs text-gray-400">(예: 010-1234-5678)</span></p>
+            <div id="login-loading" class="hidden mb-4 text-sm text-teal-600 font-medium">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>데이터 연동 중...
+            </div>
+            <input type="text" id="login-phone" class="w-full border border-gray-300 rounded-xl px-4 py-3 mb-4 focus:ring-2 focus:ring-teal-500 focus:outline-none text-center text-lg tracking-wider transition-shadow" placeholder="010-XXXX-XXXX" onkeypress="if(event.key === 'Enter') handleLogin()">
+            <button onclick="handleLogin()" class="w-full bg-teal-600 text-white rounded-xl px-4 py-3 font-bold hover:bg-teal-700 transition-colors shadow-md hover:shadow-lg">접속하기</button>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-gray-900 text-white w-full md:w-64 flex-shrink-0 flex-col z-40 transition-all duration-300 hidden md:flex absolute md:relative h-full">
+        <div class="p-5 flex justify-between items-center border-b border-gray-800">
+            <h1 class="text-base font-bold flex items-center gap-2">
+                <i class="fa-solid fa-earth-asia text-teal-400"></i>
+                <span class="truncate">K-브랜드 캠프 인천</span>
+            </h1>
+            <button onclick="toggleSidebar()" class="md:hidden text-gray-300 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <nav id="sidebar-nav" class="flex flex-col flex-1 p-4 space-y-1.5 overflow-y-auto">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-2">메인 메뉴</div>
+            <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors bg-teal-600 text-white text-sm font-medium">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> 전체 대시보드
+            </button>
+            <button onclick="navigate('applicants')" id="nav-applicants" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                <i class="fa-solid fa-users w-5 text-center"></i> 지원자 명단(통합)
+            </button>
+            <button onclick="navigate('groups')" id="nav-groups" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                <i class="fa-solid fa-layer-group w-5 text-center"></i> 선발 및 그룹 배정 (3개조)
+            </button>
+            <button onclick="navigate('all-rooms')" id="nav-all-rooms" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                <i class="fa-solid fa-bed w-5 text-center text-blue-400"></i> 전체 방 배정 현황
+            </button>
+            <button onclick="navigate('program')" id="nav-program" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                <i class="fa-solid fa-file-pdf w-5 text-center text-red-400"></i> 행사 프로그램
+            </button>
+
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-6">관리자 및 현장관리</div>
+            <button onclick="navigate('admins')" id="nav-admins" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-gray-300 hover:bg-gray-800 transition-colors text-sm font-medium">
+                <i class="fa-solid fa-address-book w-5 text-center text-gray-400"></i> 전체 관리자 명단
+            </button>
+            <button onclick="navigate('manager-A')" id="nav-manager-A" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-lg text-left text-gray-300 hover:bg-gray-800 transition-colors text-sm">
+                <div class="w-2.5 h-2.5 rounded-full bg-red-500 ml-1"></div> A그룹 관리 (1~2조)
+            </button>
+            <button onclick="navigate('manager-B')" id="nav-manager-B" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-lg text-left text-gray-300 hover:bg-gray-800 transition-colors text-sm">
+                <div class="w-2.5 h-2.5 rounded-full bg-yellow-500 ml-1"></div> B그룹 관리 (3~4조)
+            </button>
+            <button onclick="navigate('manager-C')" id="nav-manager-C" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-lg text-left text-gray-300 hover:bg-gray-800 transition-colors text-sm">
+                <div class="w-2.5 h-2.5 rounded-full bg-green-500 ml-1"></div> C그룹 관리 (5~6조)
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-800 flex flex-col gap-2">
+            <div id="current-user-info" class="text-xs text-gray-400 text-center mb-1"></div>
+            <div class="text-[10px] text-gray-500 text-center mb-1 flex items-center justify-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 데이터 실시간 연동 중</div>
+            <button onclick="openSheetConfigModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-gear text-teal-400"></i> 시트 링크 설정
+            </button>
+            <button onclick="logout()" class="w-full py-2 bg-gray-800 hover:bg-red-900/50 hover:text-red-400 rounded-lg text-xs text-gray-400 transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+            </button>
+            <button onclick="syncData(true, false)" class="w-full py-2 bg-teal-600/20 hover:bg-teal-600/40 text-teal-400 rounded-lg text-xs transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate"></i> 수동 동기화
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full">
+        <!-- 모바일 탑바 -->
+        <header class="md:hidden bg-gray-900 text-white flex items-center justify-between p-4 z-30 flex-shrink-0">
+            <h1 class="text-base font-bold flex items-center gap-2"><i class="fa-solid fa-earth-asia text-teal-400"></i> K-브랜드 캠프 인천</h1>
+            <button onclick="toggleSidebar()" class="text-gray-300 hover:text-white p-1"><i class="fa-solid fa-bars text-xl"></i></button>
+        </header>
+
+        <!-- 상단 헤더 -->
+        <header class="bg-white shadow-sm py-4 px-4 md:px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 z-10 flex-shrink-0">
+            <div>
+                <h2 id="page-title" class="text-xl md:text-2xl font-bold text-gray-800">전체 대시보드</h2>
+                <p class="text-xs text-gray-400 mt-0.5 hidden sm:block">2026 뉴스1 'K-브랜드' 글로벌 캠프 in 인천 (2026.11.24 ~ 11.25)</p>
+            </div>
+            <div class="flex items-center gap-3 self-end md:self-auto w-full md:w-auto justify-between md:justify-end print-hide">
+                <div class="flex items-center gap-2 text-xs md:text-sm bg-teal-50 px-3 py-1.5 rounded-full text-teal-700 border border-teal-100 font-medium">
+                    <i class="fa-solid fa-bullseye"></i><span>선발 인원: <strong id="header-selected-count">0</strong> / 100명</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 컨텐츠 영역 -->
+        <div id="content-area" class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50/50 block">
+            <!-- 동적 렌더링 영역 -->
+        </div>
+    </main>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2"></div>
+    
+    <div id="message-modal" class="fixed inset-0 bg-black/50 z-[150] hidden flex items-center justify-center p-4 backdrop-blur-sm print-hide">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <h3 id="modal-title" class="text-lg font-bold text-gray-900 mb-2">알림</h3>
+            <p id="modal-message" class="text-gray-600 mb-6 whitespace-pre-line text-sm"></p>
+            <div class="flex justify-end gap-3" id="modal-actions">
+                <button onclick="closeModal()" class="px-5 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 text-sm font-medium">확인</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Input Modal -->
+    <div id="input-modal" class="fixed inset-0 bg-black/50 z-[150] hidden flex items-center justify-center p-4 backdrop-blur-sm print-hide">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <h3 id="input-modal-title" class="text-lg font-bold text-gray-900 mb-2">입력</h3>
+            <p id="input-modal-message" class="text-sm text-gray-600 mb-4"></p>
+            <input type="text" id="input-modal-value" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 mb-6 focus:ring-2 focus:ring-teal-500 focus:outline-none" onkeypress="if(event.key === 'Enter') document.getElementById('input-modal-confirm').click()">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeInputModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-medium">취소</button>
+                <button id="input-modal-confirm" class="px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 text-sm font-medium">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-black/50 z-[160] hidden flex items-center justify-center p-4 backdrop-blur-sm print-hide">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 transform transition-all">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-lock text-teal-500"></i> 수정 권한 확인</h3>
+                <button onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">데이터를 수정하려면 권한 비밀번호가 필요합니다.</p>
+            <input type="password" id="admin-password-input" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 mb-6 focus:ring-2 focus:ring-teal-500 focus:outline-none text-center tracking-widest text-lg" placeholder="비밀번호 입력" onkeypress="if(event.key === 'Enter') submitPassword()">
+            <div class="flex justify-end gap-2">
+                <button onclick="closePasswordModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-medium">취소</button>
+                <button onclick="submitPassword()" class="px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 text-sm font-medium">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sheet Config Modal (시트 링크 간편 변경 모달) -->
+    <div id="sheet-config-modal" class="fixed inset-0 bg-black/50 z-[160] hidden flex items-center justify-center p-4 backdrop-blur-sm print-hide">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 transform transition-all">
+            <div class="flex items-center justify-between mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-table text-teal-600"></i> 구글 스프레드시트 연동 설정</h3>
+                <button onclick="closeSheetConfigModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">구글 스프레드시트 링크(URL) 또는 문서 ID</label>
+                    <input type="text" id="config-sheet-url" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+                    <p class="text-[11px] text-gray-400 mt-1">* 전체 주소(URL)를 그대로 붙여넣으시면 자동으로 문서 ID가 추출됩니다.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">지원자 시트 GID</label>
+                        <input type="text" id="config-app-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">관리자 시트 GID</label>
+                        <input type="text" id="config-admin-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="85491845">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">탐방지 시트 GID</label>
+                        <input type="text" id="config-loc-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="2135230578">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">프로그램 시트 GID</label>
+                        <input type="text" id="config-prog-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="388345636">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">구글 앱스 스크립트(GAS) 웹앱 URL (쓰기 연동용)</label>
+                    <input type="text" id="config-gas-url" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6 pt-3 border-t">
+                <button onclick="closeSheetConfigModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-medium">취소</button>
+                <button onclick="saveSheetConfig()" class="px-5 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 text-sm font-bold">저장 및 동기화</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applicant Detail Card Modal -->
+    <div id="applicant-modal" class="fixed inset-0 bg-black/50 z-[150] hidden flex items-center justify-center p-4 backdrop-blur-sm print-hide">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 transform transition-all flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-address-card text-teal-500"></i> 지원자 상세 정보</h3>
+                <button onclick="closeApplicantModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="overflow-y-auto flex-1 pr-2">
+                <div class="flex items-center gap-4 mb-5">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-2xl font-bold shadow-inner border border-gray-200">
+                        <span id="detail-name-avatar"></span>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-xl font-bold text-gray-900" id="detail-kor-name"></h4>
+                        <h5 class="text-sm font-medium text-gray-500 mt-0.5" id="detail-eng-name"></h5>
+                        <p class="text-xs text-gray-400 mt-1" id="detail-id-date"></p>
+                    </div>
+                    <div class="ml-auto flex flex-col items-end gap-2">
+                        <div id="detail-status-badge"></div>
+                        <span id="detail-note-badge" class="hidden bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded border border-yellow-200"></span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+                    <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 mb-0.5">국적</span>
+                        <span class="text-sm font-bold text-gray-800" id="detail-nationality"></span>
+                    </div>
+                    <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 mb-0.5">성별 / 생년월일</span>
+                        <span class="text-sm font-medium text-gray-800" id="detail-personal"></span>
+                    </div>
+                    <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 mb-0.5">한국어 능력</span>
+                        <span class="text-sm font-medium text-blue-600 font-bold" id="detail-korean"></span>
+                    </div>
+                    <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-100 col-span-2 md:col-span-3">
+                        <span class="block text-[10px] font-bold text-gray-400 mb-0.5">소속 (학교/직장)</span>
+                        <span class="text-sm font-medium text-gray-800 leading-snug" id="detail-affiliation"></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                    <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                        <span class="block text-xs font-bold text-blue-400 mb-1">연락처 (휴대폰)</span>
+                        <a href="#" class="text-sm font-bold text-blue-700 hover:underline flex items-center gap-1.5" id="detail-phone"></a>
+                    </div>
+                    <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                        <span class="block text-xs font-bold text-blue-400 mb-1">이메일</span>
+                        <a href="#" class="text-sm font-bold text-blue-700 hover:underline flex items-center gap-1.5 truncate" id="detail-email"></a>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <span class="block text-xs font-bold text-gray-400 mb-1">카카오톡 / 모국어</span>
+                        <span class="text-sm font-medium text-gray-700 truncate" id="detail-kakao"></span>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <span class="block text-xs font-bold text-gray-400 mb-1">개인 SNS 링크</span>
+                        <div class="text-sm font-medium text-gray-700 break-all" id="detail-sns"></div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <span class="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-pen-nib text-gray-400"></i> 지원 목적 및 동기</span>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap min-h-[80px]" id="detail-motivation"></div>
+                </div>
+                <div>
+                    <span class="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-user-group text-gray-400"></i> 기타 정보</span>
+                    <div class="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <p class="mb-1"><strong>동행 희망 친구:</strong> <span id="detail-companion"></span></p>
+                        <p class="mb-1"><strong>체류 비자:</strong> <span id="detail-visa"></span></p>
+                        <p><strong>캠프 인지 경로:</strong> <span id="detail-route"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 pt-4 border-t border-gray-100 flex justify-end">
+                <button onclick="closeApplicantModal()" class="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium shadow-sm">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.warn('예외 처리됨:', msg); return true;
+        };
+
+        // =========================================================================
+        // ★ [스프레드시트 연동 설정 영역] ★
+        // 새 스프레드시트의 전체 링크(URL) 또는 ID를 아래 SPREADSHEET_LINK에 붙여넣으세요!
+        // =========================================================================
+        const DEFAULT_SPREADSHEET_LINK = "https://docs.google.com/spreadsheets/d/1izQH-HdXBstMBLknfEZlpPaz1mxKHNw-d8r7jHPNUzg/edit?usp=sharing";
+        const DEFAULT_APP_SHEET_GID = "0";              // 시트1: 지원자 명단 GID
+        const DEFAULT_ADMIN_SHEET_GID = "85491845";     // 시트2: 관리자 명단 GID
+        const DEFAULT_LOC_SHEET_GID = "2135230578";     // 시트3: 그룹별 탐방지 GID
+        const DEFAULT_PROG_SHEET_GID = "388345636";     // 시트4: 행사 프로그램(PDF 링크) GID
+        const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbydGtmOUt3yH_FsUBdHPHFHCcLEL09kACClYqxesThIa9wn6wYfl5c7tRSzozEX6EBD/exec";
+
+        const TARGET_COUNT = 100; // 목표 선발 인원 (외국 국적자 100명)
+
+        // URL에서 스프레드시트 ID를 자동 추출하는 헬퍼 함수
+        function extractSheetId(input) {
+            if (!input) return "";
+            const trimmed = input.trim();
+            const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            return match && match[1] ? match[1] : trimmed;
+        }
+
+        let SHEET_ID = extractSheetId(DEFAULT_SPREADSHEET_LINK);
+        let APP_SHEET_GID = DEFAULT_APP_SHEET_GID;
+        let ADMIN_SHEET_GID = DEFAULT_ADMIN_SHEET_GID;
+        let LOC_SHEET_GID = DEFAULT_LOC_SHEET_GID;
+        let PROG_SHEET_GID = DEFAULT_PROG_SHEET_GID;
+        let GAS_WEB_APP_URL = DEFAULT_GAS_WEB_APP_URL;
+
+        // 기획서 기반 그룹별 기본 인천 탐방 코스 (시트 미입력 시 자동 표시)
+        const DEFAULT_INCHEON_LOCATIONS = {
+            A: "[1일차] 패션그룹형지 → 무신사(송도점) → 차이나타운(중식) → 홍보선 체험 → 올리브영(인천스퀘어점) → 하버파크호텔(네트워킹)\n[2일차] 개항장 역사문화의 거리 → 콜마스크 → CJ제일제당 비비고 → 송도센트럴파크(도시역사관·수상택시) → G타워(폐막식)",
+            B: "[1일차] 패션그룹형지 → 무신사(송도점) → 차이나타운(중식) → 개항장 역사문화의 거리 → 이민사박물관 → 하버파크호텔(네트워킹)\n[2일차] 홍보선 체험 → 이민사박물관 → 콜마스크 → 송도센트럴파크(도시역사관·수상택시) → G타워(폐막식)",
+            C: "[1일차] 패션그룹형지 → 무신사(송도점) → 차이나타운(중식) → 올리브영(인천스퀘어점) → 개항장 역사문화의 거리 → 하버파크호텔(네트워킹)\n[2일차] 이민사박물관 → 더스카이184(청라하늘대교 전망대) → CJ제일제당 비비고 → 송도센트럴파크(도시역사관·수상택시) → G타워(폐막식)"
+        };
+
+        let chartInstances = {};
+        let syncInterval = null;
+        let state = {
+            currentView: 'dashboard', managerTab: 'list', applicantFilter: 'all',
+            applicants: [],
+            locations: { ...DEFAULT_INCHEON_LOCATIONS },
+            programLink: '',
+            admins: [], managers: { 'A': [], 'B': [], 'C': [], '총괄': [] },
+            searchQuery: '', isAuthenticated: false, currentUser: null, dataLoaded: false,
+            sortConfig: { applicants: { key: 'id', direction: 'asc' }, admins: { key: 'name', direction: 'asc' } }
+        };
+
+        const ACTION_PW = "1006";
+        let isActionAuth = false;
+        let pendingAction = null;
+
+        window.onload = () => {
+            loadSheetConfigFromStorage();
+            loadFromLocalStorage();
+            syncData(false, false);
+            checkAuthStatus();
+        };
+
+        function loadSheetConfigFromStorage() {
+            try {
+                const savedCfg = localStorage.getItem('kBrandIncheonSheetConfig_v3');
+                if (savedCfg) {
+                    const cfg = JSON.parse(savedCfg);
+                    if (cfg.sheetLink) SHEET_ID = extractSheetId(cfg.sheetLink);
+                    if (cfg.appGid) APP_SHEET_GID = cfg.appGid;
+                    if (cfg.adminGid) ADMIN_SHEET_GID = cfg.adminGid;
+                    if (cfg.locGid) LOC_SHEET_GID = cfg.locGid;
+                    if (cfg.progGid) PROG_SHEET_GID = cfg.progGid;
+                    if (cfg.gasUrl !== undefined) GAS_WEB_APP_URL = cfg.gasUrl;
+                }
+            } catch (e) {}
+        }
+
+        function openSheetConfigModal() {
+            requireAuthForAction(() => {
+                document.getElementById('config-sheet-url').value = SHEET_ID;
+                document.getElementById('config-app-gid').value = APP_SHEET_GID;
+                document.getElementById('config-admin-gid').value = ADMIN_SHEET_GID;
+                document.getElementById('config-loc-gid').value = LOC_SHEET_GID;
+                document.getElementById('config-prog-gid').value = PROG_SHEET_GID;
+                document.getElementById('config-gas-url').value = GAS_WEB_APP_URL;
+                document.getElementById('sheet-config-modal').classList.remove('hidden');
+            });
+        }
+
+        function closeSheetConfigModal() {
+            document.getElementById('sheet-config-modal').classList.add('hidden');
+        }
+
+        function saveSheetConfig() {
+            const rawUrl = document.getElementById('config-sheet-url').value.trim();
+            if (!rawUrl) return showToast('스프레드시트 링크 또는 ID를 입력해주세요.', 'error');
+            SHEET_ID = extractSheetId(rawUrl);
+            APP_SHEET_GID = document.getElementById('config-app-gid').value.trim() || "0";
+            ADMIN_SHEET_GID = document.getElementById('config-admin-gid').value.trim() || "0";
+            LOC_SHEET_GID = document.getElementById('config-loc-gid').value.trim() || "0";
+            PROG_SHEET_GID = document.getElementById('config-prog-gid').value.trim() || "0";
+            GAS_WEB_APP_URL = document.getElementById('config-gas-url').value.trim();
+
+            localStorage.setItem('kBrandIncheonSheetConfig_v3', JSON.stringify({
+                sheetLink: rawUrl,
+                appGid: APP_SHEET_GID,
+                adminGid: ADMIN_SHEET_GID,
+                locGid: LOC_SHEET_GID,
+                progGid: PROG_SHEET_GID,
+                gasUrl: GAS_WEB_APP_URL
+            }));
+
+            closeSheetConfigModal();
+            showToast('새 스프레드시트 설정이 저장되었습니다. 데이터를 불러옵니다.', 'success');
+            syncData(true, false);
+        }
+
+        function checkAuthStatus() {
+            if (state.isAuthenticated && state.currentUser) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('current-user-info').innerText = `[${state.currentUser.role}] ${state.currentUser.name}님`;
+                render();
+                
+                if(syncInterval) clearInterval(syncInterval);
+                syncInterval = setInterval(() => syncData(false, true), 10000);
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                if(syncInterval) clearInterval(syncInterval);
+            }
+        }
+
+        function requireAuthForAction(action) {
+            if (isActionAuth) { action(); } 
+            else {
+                pendingAction = action;
+                document.getElementById('admin-password-input').value = '';
+                document.getElementById('password-modal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('admin-password-input').focus(), 100);
+            }
+        }
+
+        function submitPassword() {
+            if (document.getElementById('admin-password-input').value === ACTION_PW) {
+                isActionAuth = true; closePasswordModal();
+                showToast("수정 권한이 확인되었습니다.", "success");
+                if (pendingAction) { pendingAction(); pendingAction = null; }
+            } else { showToast("비밀번호가 일치하지 않습니다.", "error"); }
+        }
+
+        function closePasswordModal() { document.getElementById('password-modal').classList.add('hidden'); pendingAction = null; }
+
+        function syncData(showToastMsg = false, isSilent = false) {
+            if(showToastMsg) showToast("데이터 동기화 중...", "info");
+            else if(!isSilent) document.getElementById('login-loading').classList.remove('hidden');
+
+            const cacheBuster = new Date().getTime();
+            ['syncAppScript', 'syncAdminScript', 'syncLocScript', 'syncProgScript'].forEach(id => {
+                const old = document.getElementById(id); if (old) old.remove();
+            });
+
+            const s1 = document.createElement('script'); s1.id = 'syncAppScript'; s1.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleAppSheet&gid=${APP_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s1);
+            const s2 = document.createElement('script'); s2.id = 'syncAdminScript'; s2.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleAdminSheet&gid=${ADMIN_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s2);
+            const s3 = document.createElement('script'); s3.id = 'syncLocScript'; s3.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleLocSheet&gid=${LOC_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s3);
+            const s4 = document.createElement('script'); s4.id = 'syncProgScript'; s4.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleProgSheet&gid=${PROG_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s4);
+        }
+
+        const getVal = (row, idx) => {
+            if (!row || !row[idx]) return '';
+            if (row[idx].f !== null && row[idx].f !== undefined && String(row[idx].v).startsWith('Date(')) {
+                return String(row[idx].f).trim();
+            }
+            if (row[idx].v !== null && row[idx].v !== undefined) return String(row[idx].v).trim();
+            return '';
+        };
+
+        // 타임스탬프 전용 파서: [월-일-연도 시간:분:초] (MM-DD-YYYY HH:mm:ss) 형식으로 변환
+        const getTimestampVal = (row, idx) => {
+            if (!row || !row[idx]) return '';
+            const cell = row[idx];
+            const pad = (n) => String(n).padStart(2, '0');
+            if (cell.v !== null && cell.v !== undefined) {
+                const vStr = String(cell.v).trim();
+                const gvizMatch = vStr.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+))?\s*\)$/);
+                if (gvizMatch) {
+                    const yr = gvizMatch[1];
+                    const mo = pad(parseInt(gvizMatch[2], 10) + 1);
+                    const dy = pad(parseInt(gvizMatch[3], 10));
+                    const hr = pad(parseInt(gvizMatch[4] || '0', 10));
+                    const mi = pad(parseInt(gvizMatch[5] || '0', 10));
+                    const se = pad(parseInt(gvizMatch[6] || '0', 10));
+                    return `${mo}-${dy}-${yr} ${hr}:${mi}:${se}`;
+                }
+                if (cell.f !== null && cell.f !== undefined) return String(cell.f).trim();
+                return vStr;
+            }
+            return '';
+        };
+
+        window.handleAppSheet = function(response) {
+            try {
+                if (response.status === 'error') throw new Error("권한 오류");
+                const rows = response.table.rows;
+                let newApps = [];
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i].c;
+                    if (!row || !row[0] || row[0].v === null) continue;
+                    
+                    const id = getVal(row, 0);
+                    if (id === '지원번호' || id === '') continue;
+
+                    // T열(19): 선정
+                    let isSelRaw = getVal(row, 19).toUpperCase();
+                    let sheetIsSelected = ['TRUE', 'O', 'Y', '1', '선정', '선발', '합격', 'V', '참여'].includes(isSelRaw);
+
+                    // U열(20): 그룹 (3개 조편성: A, B, C)
+                    let gRaw = getVal(row, 20).toUpperCase();
+                    let pGroup = null;
+                    if (gRaw.includes('A')) pGroup = 'A';
+                    else if (gRaw.includes('B')) pGroup = 'B';
+                    else if (gRaw.includes('C')) pGroup = 'C';
+                    
+                    // X열(23): 출결
+                    let isAttendedRaw = getVal(row, 23).toUpperCase();
+                    let sheetIsAttended = ['TRUE', 'O', 'Y', '1', '출석', '완료', 'V'].includes(isAttendedRaw);
+
+                    // M열(12): 한국어 능력 간소화
+                    let korRaw = getVal(row, 12);
+                    let korSkill = '-';
+                    if(korRaw.includes('상') || korRaw.toUpperCase().includes('HIGH') || korRaw.toUpperCase().includes('ADVANCED')) korSkill = '상';
+                    else if(korRaw.includes('중') || korRaw.toUpperCase().includes('MID') || korRaw.toUpperCase().includes('INTERMEDIATE')) korSkill = '중';
+                    else if(korRaw.includes('하') || korRaw.toUpperCase().includes('LOW') || korRaw.toUpperCase().includes('BEGINNER')) korSkill = '하';
+
+                    newApps.push({
+                        id: id,
+                        note: getVal(row, 1),           // B열(1)
+                        engName: getVal(row, 2),        // C열(2)
+                        korName: getVal(row, 3),        // D열(3)
+                        nationality: getVal(row, 4),    // E열(4)
+                        affiliation: getVal(row, 5),    // F열(5)
+                        motherTongue: getVal(row, 6),   // G열(6)
+                        dob: getVal(row, 7),            // H열(7)
+                        gender: getVal(row, 8),         // I열(8)
+                        phone: getVal(row, 9),          // J열(9)
+                        email: getVal(row, 10),         // K열(10)
+                        kakao: getVal(row, 11),         // L열(11)
+                        korean: korSkill,               // M열(12) 간소화
+                        visa: getVal(row, 13),          // N열(13)
+                        motivation: getVal(row, 14),    // O열(14)
+                        companion: getVal(row, 15),     // P열(15)
+                        sns: getVal(row, 16),           // Q열(16)
+                        date: getTimestampVal(row, 17) || '-', // R열(17): [월-일-연도 시간:분:초]
+                        route: getVal(row, 18),         // S열(18)
+                        isSelected: sheetIsSelected,    // T열(19)
+                        group: pGroup,                  // U열(20)
+                        room: getVal(row, 21) || null,  // V열(21)
+                        team: getVal(row, 22) || null,  // W열(22)
+                        isAttended: sheetIsAttended     // X열(23)
+                    });
+                }
+                
+                const isChanged = JSON.stringify(state.applicants) !== JSON.stringify(newApps);
+                if (isChanged || !state.dataLoaded) {
+                    state.applicants = newApps;
+                    state.dataLoaded = true;
+                    saveToLocalStorage();
+                    if (state.isAuthenticated) render();
+                }
+                
+                const loader = document.getElementById('login-loading');
+                if(loader) loader.classList.add('hidden');
+            } catch (e) {
+                console.error("App Sheet Error", e);
+            }
+        };
+
+        // 실시간 쓰기 통신
+        async function updateSheetData(app) {
+            if(!GAS_WEB_APP_URL) return;
+            try {
+                await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    redirect: 'follow', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        id: String(app.id), 
+                        isSelected: app.isSelected ? '선정' : '불참',
+                        group: app.group || '',
+                        room: app.room || '',
+                        team: app.team || '',
+                        attendance: app.isAttended ? '출석' : ''
+                    })
+                });
+            } catch (e) {
+                console.error("시트 업데이트 실패:", e);
+                showToast('구글 시트 연동에 실패했습니다.', 'error');
+            }
+        }
+
+        window.handleAdminSheet = function(response) {
+            try {
+                const rows = response.table.rows;
+                let newAdmins = [];
+                let newManagers = { 'A': [], 'B': [], 'C': [], '총괄': [] };
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i].c;
+                    if (!row || !row[2] || row[2].v === null) continue;
+                    
+                    const group = getVal(row, 0); const role = getVal(row, 1);
+                    const name = getVal(row, 2); const phone = getVal(row, 3);
+                    if (name === '관리자명' || name === '이름' || name === '') continue;
+
+                    const adminObj = { group: group || '미정', role: role || '관리자', name, phone };
+                    newAdmins.push(adminObj);
+
+                    const upGroup = group.toUpperCase();
+                    if(upGroup.includes('A')) newManagers['A'].push(adminObj);
+                    else if(upGroup.includes('B')) newManagers['B'].push(adminObj);
+                    else if(upGroup.includes('C')) newManagers['C'].push(adminObj);
+                    else newManagers['총괄'].push(adminObj);
+                }
+                
+                state.admins = newAdmins;
+                state.managers = newManagers;
+                saveToLocalStorage(); 
+                if (state.isAuthenticated && (state.currentView === 'admins' || state.currentView.startsWith('manager-'))) render();
+            } catch (e) {}
+        };
+
+        window.handleLocSheet = function(response) {
+            try {
+                const rows = response.table.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i].c;
+                    if (!row || !row[0] || row[0].v === null) continue;
+                    const groupRaw = getVal(row, 0).toUpperCase(); const loc = getVal(row, 1);
+                    if (groupRaw.includes('A') && loc) state.locations['A'] = loc;
+                    else if (groupRaw.includes('B') && loc) state.locations['B'] = loc;
+                    else if (groupRaw.includes('C') && loc) state.locations['C'] = loc;
+                }
+                saveToLocalStorage();
+                if (state.isAuthenticated && state.currentView.startsWith('manager-')) render();
+            } catch (e) {}
+        };
+
+        window.handleProgSheet = function(response) {
+            try {
+                const rows = response.table.rows;
+                let rawLink = '';
+                for (let i = 0; i < rows.length; i++) {
+                    if (!rows[i].c) continue;
+                    for (let j = 0; j < rows[i].c.length; j++) {
+                        const val = getVal(rows[i].c, j);
+                        if (val && (val.includes('http://') || val.includes('https://'))) { rawLink = val; break; }
+                    }
+                    if (rawLink) break;
+                }
+                if (rawLink) {
+                    const match = rawLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                    state.programLink = match && match[1] ? `https://drive.google.com/file/d/${match[1]}/preview` : rawLink;
+                    saveToLocalStorage();
+                    if (state.isAuthenticated && state.currentView === 'program') render();
+                }
+            } catch (e) {}
+        };
+
+        function handleLogin() {
+            try {
+                const phoneInput = document.getElementById('login-phone').value.trim();
+                if (!phoneInput) return showToast('연락처를 입력해주세요.', 'error');
+                const sanitizedInput = phoneInput.replace(/-/g, '');
+                const admin = (state.admins || []).find(a => (a.phone || '') === phoneInput || (a.phone || '').replace(/-/g, '') === sanitizedInput);
+                
+                if (admin) {
+                    state.isAuthenticated = true; state.currentUser = admin; saveToLocalStorage();
+                    showToast(`환영합니다, ${admin.name}님!`, 'success'); checkAuthStatus();
+                } else { showToast('등록되지 않은 연락처입니다.', 'error'); }
+            } catch (e) { showToast('로그인 처리 중 문제가 발생했습니다.', 'error'); }
+        }
+
+        function logout() {
+            state.isAuthenticated = false; state.currentUser = null; saveToLocalStorage();
+            checkAuthStatus(); document.getElementById('login-phone').value = ''; 
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('kBrandIncheonDashboardState_v2', JSON.stringify({
+                    applicants: state.applicants, locations: state.locations, programLink: state.programLink,
+                    isAuthenticated: state.isAuthenticated, currentUser: state.currentUser
+                }));
+            } catch (e) {}
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('kBrandIncheonDashboardState_v2');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    state.applicants = Array.isArray(data.applicants) ? data.applicants : [];
+                    state.locations = data.locations || { ...DEFAULT_INCHEON_LOCATIONS };
+                    state.programLink = data.programLink || '';
+                    state.isAuthenticated = data.isAuthenticated || false; state.currentUser = data.currentUser || null;
+                }
+            } catch (e) {}
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function navigate(view) {
+            state.currentView = view;
+            if(window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('hidden')) toggleSidebar();
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-teal-600', 'text-white'); btn.classList.add('text-gray-300');
+            });
+            const activeBtn = document.getElementById(`nav-${view}`);
+            if (activeBtn) { activeBtn.classList.remove('text-gray-300'); activeBtn.classList.add('bg-teal-600', 'text-white'); }
+            render();
+        }
+
+        function setManagerTab(tab) { state.managerTab = tab; render(); }
+        function setAppFilter(filter) { state.applicantFilter = filter; render(); }
+
+        function sortData(dataset, key) {
+            if (!state.sortConfig[dataset]) return;
+            let direction = state.sortConfig[dataset].direction === 'asc' ? 'desc' : 'asc';
+            if (state.sortConfig[dataset].key !== key) direction = 'asc'; 
+            state.sortConfig[dataset] = { key, direction };
+            const targetArray = dataset === 'applicants' ? state.applicants : state.admins;
+            targetArray.sort((a, b) => {
+                let valA = a[key] !== undefined && a[key] !== null ? a[key] : ''; 
+                let valB = b[key] !== undefined && b[key] !== null ? b[key] : '';
+                
+                if (key === 'id') {
+                    const numA = parseInt(valA, 10);
+                    const numB = parseInt(valB, 10);
+                    if (!isNaN(numA) && !isNaN(numB)) return direction === 'asc' ? numA - numB : numB - numA;
+                }
+
+                if (key === 'isSelected') { valA = valA ? 1 : 0; valB = valB ? 1 : 0; }
+                if (typeof valA === 'string') valA = valA.toLowerCase(); if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1; return 0;
+            });
+            render();
+        }
+
+        function getSortIcon(dataset, key) {
+            if (state.sortConfig[dataset] && state.sortConfig[dataset].key === key) {
+                return state.sortConfig[dataset].direction === 'asc' ? '<i class="fa-solid fa-sort-up ml-1 text-teal-500"></i>' : '<i class="fa-solid fa-sort-down ml-1 text-teal-500"></i>';
+            }
+            return '<i class="fa-solid fa-sort ml-1 text-gray-300"></i>';
+        }
+
+        // 성별 판별 헬퍼 함수 ('여 / Female', '남 / Male' 등 복합 표기 완벽 인식)
+        function isFemaleGender(g) {
+            if (!g) return false;
+            const s = String(g).toLowerCase().trim();
+            return s.includes('여') || s.includes('female') || s === 'f';
+        }
+
+        function isMaleGender(g) {
+            if (!g || isFemaleGender(g)) return false;
+            const s = String(g).toLowerCase().trim();
+            return s.includes('남') || s.includes('male') || s === 'm';
+        }
+
+        function render() {
+            try {
+                const content = document.getElementById('content-area'); const title = document.getElementById('page-title');
+                document.getElementById('header-selected-count').innerText = (state.applicants || []).filter(a => a.isSelected).length;
+
+                if(state.currentView === 'dashboard') { title.innerText = "전체 대시보드 통계"; content.innerHTML = renderDashboard(); setTimeout(initCharts, 50); } 
+                else if(state.currentView === 'applicants') { title.innerText = "지원자 명단 (통합)"; content.innerHTML = renderApplicantsList(); }
+                else if(state.currentView === 'groups') { title.innerText = "선발 및 그룹 배정 (A·B·C 3개 그룹)"; content.innerHTML = renderGroupsManagement(); }
+                else if(state.currentView === 'all-rooms') { title.innerText = "전체 방 배정 현황 (인천 하버파크호텔)"; content.innerHTML = renderAllRooms(); }
+                else if(state.currentView === 'program') { title.innerText = "행사 프로그램 (11.24~11.25 인천)"; content.innerHTML = renderProgramViewer(); }
+                else if(state.currentView === 'admins') { title.innerText = "전체 관리자 명단"; content.innerHTML = renderAdminList(); }
+                else if(state.currentView.startsWith('manager-')) {
+                    const grp = state.currentView.split('-')[1];
+                    const subTeamLabel = grp === 'A' ? '1~2조' : (grp === 'B' ? '3~4조' : '5~6조');
+                    title.innerHTML = `<span class="text-gray-400">그룹 현장 관리 / </span> ${grp}그룹 (${subTeamLabel})`;
+                    content.innerHTML = renderManagerView(grp);
+                }
+            } catch (e) { console.error(e); showToast("화면 렌더링 중 오류가 발생했습니다.", "error"); }
+        }
+
+        function renderDashboard() {
+            const apps = Array.isArray(state.applicants) ? state.applicants : [];
+            const selected = apps.filter(a => a.isSelected);
+            const total = apps.length; 
+            const pct = total === 0 ? 0 : Math.min(100, Math.round((selected.length / TARGET_COUNT) * 100));
+
+            const grpCount = { 
+                A: selected.filter(a => a.group === 'A').length, 
+                B: selected.filter(a => a.group === 'B').length, 
+                C: selected.filter(a => a.group === 'C').length, 
+                Unassigned: selected.filter(a => !a.group).length 
+            };
+
+            // 소속별 인원 리스트 UI 생성
+            let schoolHtml = '';
+            if (selected.length > 0) {
+                const schMap = {};
+                selected.forEach(a => { const aff = (a.affiliation || '미기재').trim(); schMap[aff] = (schMap[aff]||0) + 1; });
+                const sortedSch = Object.entries(schMap).sort((a,b) => b[1] - a[1]);
+                const maxCnt = sortedSch.length > 0 ? sortedSch[0][1] : 1;
+                
+                schoolHtml = sortedSch.map(s => {
+                    const pctBar = (s[1] / maxCnt) * 100;
+                    return `
+                    <div class="mb-3 hover:bg-gray-50 p-1.5 rounded transition-colors">
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="font-bold text-gray-700 truncate pr-2" title="${s[0]}">${s[0]}</span>
+                            <span class="font-bold text-teal-600 flex-shrink-0">${s[1]}명</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                            <div class="bg-teal-500 h-1.5 rounded-full" style="width: ${pctBar}%"></div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            let chartsHtml = '';
+            if (selected.length === 0) {
+                chartsHtml = `
+                    <div class="col-span-full bg-white rounded-2xl p-10 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-500 min-h-[300px]">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100"><i class="fa-solid fa-chart-pie text-2xl text-gray-300"></i></div>
+                        <h3 class="text-lg font-bold text-gray-700 mb-1">선정된 인원이 없습니다</h3>
+                        <p class="text-sm text-center">지원자 명단에서 참가자를 선정하면 통계가 나타납니다.</p>
+                        <button onclick="navigate('applicants')" class="mt-4 bg-teal-50 text-teal-600 px-4 py-2 rounded-lg text-sm font-bold border border-teal-100 hover:bg-teal-100 transition-colors">명단으로 이동</button>
+                    </div>`;
+            } else {
+                chartsHtml = `
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">지원 국가 (국적별) 전체 분포</h3>
+                        <div class="overflow-x-auto w-full"><div class="relative h-64 w-full" id="nat-chart-wrapper"><canvas id="chartNationality"></canvas></div></div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">선정자 성별 분포</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="chartGender"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">그룹별 성별 현황</h3>
+                        <div class="relative h-64 w-full"><canvas id="chartGroupGender"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                            <span>소속별 인원 전체 분포</span> <span class="text-[10px] font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">스크롤</span>
+                        </h3>
+                        <div class="overflow-y-auto w-full h-64 pr-2">${schoolHtml}</div>
+                    </div>`;
+            }
+
+            if (total === 0) {
+                return `<div class="flex flex-col items-center justify-center h-full text-gray-500 py-10"><i class="fa-solid fa-triangle-exclamation text-4xl mb-4 text-yellow-400"></i><h3 class="text-lg font-bold text-gray-800">데이터를 불러오지 못했습니다</h3><p class="text-sm mt-2 text-center">시트에 데이터가 없거나 권한 문제일 수 있습니다.</p><button onclick="syncData(true)" class="mt-6 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold text-sm shadow hover:bg-teal-700 transition-colors">동기화 재시도</button></div>`;
+            }
+
+            return `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div onclick="navigate('applicants')" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow hover:border-teal-200">
+                        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl flex-shrink-0"><i class="fa-solid fa-users"></i></div><div><p class="text-xs text-gray-500 font-medium">총 지원자</p><p class="text-2xl font-bold">${total}<span class="text-sm font-normal ml-1">명</span></p></div>
+                    </div>
+                    <div onclick="navigate('applicants')" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow hover:border-teal-200">
+                        <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-xl flex-shrink-0"><i class="fa-solid fa-user-check"></i></div><div><p class="text-xs text-gray-500 font-medium">선정 완료</p><p class="text-2xl font-bold text-teal-600">${selected.length}<span class="text-sm font-normal text-gray-500 ml-1">/ ${TARGET_COUNT}명</span></p></div>
+                    </div>
+                    <div onclick="navigate('applicants')" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow hover:border-teal-200">
+                        <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-xl flex-shrink-0"><i class="fa-solid fa-hourglass-half"></i></div><div><p class="text-xs text-gray-500 font-medium">잔여 TO</p><p class="text-2xl font-bold text-yellow-600">${Math.max(0, TARGET_COUNT - selected.length)}<span class="text-sm font-normal text-gray-500 ml-1">명</span></p></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
+                    <div class="flex justify-between mb-2"><span class="text-sm font-bold text-gray-700">선발 진척도</span><span class="text-sm font-bold text-teal-600">${pct}%</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-3"><div class="bg-teal-500 h-3 rounded-full transition-all duration-500" style="width: ${pct}%"></div></div>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 border-b border-gray-200 pb-2">3개 그룹 배정 현황 <span class="text-xs font-normal text-gray-400 ml-1">(선정자 기준 · 총 6개 세부조)</span></h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div onclick="navigate('manager-A')" class="bg-white rounded-xl p-3 shadow-sm border-t-4 border-red-500 text-center cursor-pointer hover:bg-red-50 transition-colors"><p class="text-xs text-gray-500 mb-1 font-bold">A 그룹 <span class="text-[10px] text-red-500 font-normal">(1~2조)</span></p><p class="text-xl font-bold text-gray-800">${grpCount.A}명</p></div>
+                        <div onclick="navigate('manager-B')" class="bg-white rounded-xl p-3 shadow-sm border-t-4 border-yellow-500 text-center cursor-pointer hover:bg-yellow-50 transition-colors"><p class="text-xs text-gray-500 mb-1 font-bold">B 그룹 <span class="text-[10px] text-yellow-600 font-normal">(3~4조)</span></p><p class="text-xl font-bold text-gray-800">${grpCount.B}명</p></div>
+                        <div onclick="navigate('manager-C')" class="bg-white rounded-xl p-3 shadow-sm border-t-4 border-green-500 text-center cursor-pointer hover:bg-green-50 transition-colors"><p class="text-xs text-gray-500 mb-1 font-bold">C 그룹 <span class="text-[10px] text-green-600 font-normal">(5~6조)</span></p><p class="text-xl font-bold text-gray-800">${grpCount.C}명</p></div>
+                        <div onclick="navigate('groups')" class="bg-gray-100 rounded-xl p-3 shadow-sm border border-gray-200 text-center cursor-pointer hover:bg-gray-200 transition-colors"><p class="text-xs text-gray-500 mb-1 font-bold">미배정</p><p class="text-xl font-bold text-gray-400">${grpCount.Unassigned}명</p></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">${chartsHtml}</div>
+            `;
+        }
+
+        function initCharts() {
+            try {
+                if (typeof Chart === 'undefined') return;
+                Object.values(chartInstances).forEach(c => { if (c && typeof c.destroy === 'function') c.destroy(); }); chartInstances = {};
+                const selected = (state.applicants || []).filter(a => a.isSelected);
+                if(selected.length === 0) return;
+
+                Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+                const colors = { m: '#3B82F6', f: '#EC4899', gA: '#EF4444', gB: '#F59E0B', gC: '#10B981', nat: '#6366F1' };
+
+                const isMale = (g) => isMaleGender(g);
+                const isFemale = (g) => isFemaleGender(g);
+
+                if (document.getElementById('chartNationality')) {
+                    const natMap = {}; selected.forEach(a => { const n = (a.nationality || '미기재').trim(); natMap[n] = (natMap[n]||0) + 1; });
+                    const sortedNat = Object.entries(natMap).sort((a,b)=>b[1]-a[1]);
+                    
+                    const wrapper = document.getElementById('nat-chart-wrapper');
+                    if(wrapper) wrapper.style.minWidth = Math.max(100, sortedNat.length * 40) + 'px';
+
+                    chartInstances.nationality = new Chart(document.getElementById('chartNationality'), { 
+                        type: 'bar', 
+                        data: { labels: sortedNat.map(x=>x[0]), datasets: [{ label: '인원수', data: sortedNat.map(x=>x[1]), backgroundColor: colors.nat, borderRadius: 4 }] }, 
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend:{display:false} } } 
+                    });
+                }
+                if (document.getElementById('chartGender')) {
+                    const mCount = selected.filter(a => isMale(a.gender)).length;
+                    const fCount = selected.filter(a => isFemale(a.gender)).length;
+                    chartInstances.gender = new Chart(document.getElementById('chartGender'), { 
+                        type: 'doughnut', 
+                        data: { labels: ['남성', '여성'], datasets: [{ data: [mCount, fCount], backgroundColor: [colors.m, colors.f] }] }, 
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } 
+                    });
+                }
+                if (document.getElementById('chartGroupGender')) {
+                    const grpStats = { A: {m:0,f:0}, B: {m:0,f:0}, C: {m:0,f:0} };
+                    selected.forEach(a => { 
+                        if(a.group && grpStats[a.group]) { 
+                            if(isMale(a.gender)) grpStats[a.group].m++; 
+                            else if(isFemale(a.gender)) grpStats[a.group].f++; 
+                        } 
+                    });
+                    chartInstances.groupGender = new Chart(document.getElementById('chartGroupGender'), { 
+                        type: 'bar', 
+                        data: { 
+                            labels: ['A그룹 (1~2조)', 'B그룹 (3~4조)', 'C그룹 (5~6조)'], 
+                            datasets: [ 
+                                { label: '남성', data: [grpStats.A.m, grpStats.B.m, grpStats.C.m], backgroundColor: colors.m }, 
+                                { label: '여성', data: [grpStats.A.f, grpStats.B.f, grpStats.C.f], backgroundColor: colors.f } 
+                            ] 
+                        }, 
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } } } 
+                    });
+                }
+            } catch(e) {}
+        }
+
+        function renderAdminList() {
+            const rows = (state.admins || []).map(a => `<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-4 text-sm font-medium"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border border-gray-200">${a.group}</span></td><td class="p-4 text-sm text-gray-600">${a.role}</td><td class="p-4 text-sm font-bold text-gray-900">${a.name}</td><td class="p-4 text-sm text-teal-600"><a href="tel:${a.phone}"><i class="fa-solid fa-phone text-xs mr-1"></i>${a.phone}</a></td></tr>`).join('');
+            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6"><div class="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center"><div><h3 class="font-bold text-gray-800">전체 관리자 명단</h3></div><span class="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full border border-teal-200">총 ${(state.admins || []).length}명</span></div><div class="overflow-x-auto w-full"><table class="w-full text-left min-w-[500px]"><thead class="bg-gray-50 sticky top-0 border-b border-gray-200 shadow-sm z-10"><tr><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'group')">담당 그룹 ${getSortIcon('admins', 'group')}</th><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'role')">직책/구분 ${getSortIcon('admins', 'role')}</th><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'name')">이름 ${getSortIcon('admins', 'name')}</th><th class="p-4 text-xs font-bold text-gray-500">연락처</th></tr></thead><tbody>${rows || `<tr><td colspan="4" class="p-8 text-center text-gray-400">명단이 없습니다.</td></tr>`}</tbody></table></div></div>`;
+        }
+
+        function renderApplicantsList() {
+            const filterType = state.applicantFilter || 'all';
+            let filteredApps = (state.applicants || []).filter(a => { 
+                let matchFilter = true;
+                if (filterType === 'selected') matchFilter = a.isSelected; 
+                if (filterType === 'waiting') matchFilter = !a.isSelected; 
+                
+                let matchSearch = true;
+                if (state.searchQuery) {
+                    const query = state.searchQuery.toLowerCase();
+                    matchSearch = (a.korName || "").toLowerCase().includes(query) || 
+                                  (a.engName || "").toLowerCase().includes(query) ||
+                                  (a.phone || "").includes(query) ||
+                                  (a.affiliation || "").toLowerCase().includes(query);
+                }
+                return matchFilter && matchSearch;
+            });
+
+            const rows = filteredApps.map(a => {
+                const isM = isMaleGender(a.gender);
+                const isF = isFemaleGender(a.gender);
+                const genderStyle = isM ? 'text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded' : (isF ? 'text-pink-600 font-bold bg-pink-50 px-1.5 py-0.5 rounded' : 'text-gray-600 font-bold bg-gray-100 px-1.5 py-0.5 rounded');
+                const formattedId = !isNaN(a.id) && String(a.id).trim() !== '' ? String(a.id).padStart(3, '0') : a.id;
+                
+                return `<tr class="border-b border-gray-100 hover:bg-teal-50/30">
+                    <td class="p-3 text-sm text-gray-500 whitespace-nowrap">${formattedId}</td>
+                    <td class="p-3 whitespace-nowrap">
+                        <button onclick="showApplicantDetail('${a.id}')" class="text-left flex flex-col hover:opacity-80 transition-opacity">
+                            <span class="text-blue-600 font-bold flex items-center gap-1">${a.korName || '-'} <i class="fa-solid fa-magnifying-glass text-[10px] text-blue-400"></i></span>
+                            <span class="text-[10px] text-gray-500">${a.engName || '-'}</span>
+                        </button>
+                    </td>
+                    <td class="p-3 text-sm whitespace-nowrap"><div class="text-gray-800 font-bold">${a.nationality || '-'}</div></td>
+                    <td class="p-3 text-sm whitespace-nowrap"><span class="${genderStyle} text-xs">${a.gender || '-'}</span><div class="text-[10px] text-gray-500 mt-1">${a.dob || '-'}</div></td>
+                    <td class="p-3 text-sm whitespace-nowrap"><div class="text-gray-800 truncate max-w-[150px]">${a.affiliation || '-'}</div><div class="text-[10px] text-teal-600 font-bold mt-0.5">한국어: ${a.korean || '-'}</div></td>
+                    <td class="p-3 text-sm whitespace-nowrap">
+                        <div class="text-gray-800 font-medium flex items-center gap-1.5 mb-1"><i class="fa-solid fa-phone text-[10px] text-gray-400"></i><a href="tel:${a.phone}" class="hover:text-blue-600 hover:underline">${a.phone || '-'}</a></div>
+                        <div class="text-[10px] text-gray-500 flex items-center gap-1.5 truncate max-w-[120px]" title="${a.email}"><i class="fa-solid fa-envelope text-gray-400"></i>${a.email || '-'}</div>
+                    </td>
+                    <td class="p-3 text-sm whitespace-nowrap">${a.isSelected ? `<span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-check mr-1"></i>선정</span>` : `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">불참</span>`}</td>
+                    <td class="p-3 text-right whitespace-nowrap"><button onclick="toggleSelection('${a.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ${a.isSelected ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-teal-600 text-white hover:bg-teal-700'}">${a.isSelected ? '취소' : '선정'}</button></td>
+                </tr>`
+            });
+
+            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
+                <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center bg-gray-200/50 p-1 rounded-lg">
+                        <button onclick="setAppFilter('all')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'all' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">전체보기</button>
+                        <button onclick="setAppFilter('selected')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'selected' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">선정 명단</button>
+                        <button onclick="setAppFilter('waiting')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'waiting' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">불참 명단</button>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="applicant-search" value="${state.searchQuery}" onkeyup="updateSearch(this.value)" placeholder="이름, 소속, 연락처 검색..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-shadow">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="sortData('applicants', 'korName')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors whitespace-nowrap"><i class="fa-solid fa-arrow-down-a-z text-teal-500"></i> 이름순</button>
+                            <button onclick="downloadCSV()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 border border-green-700 rounded-lg text-sm font-bold text-white hover:bg-green-700 shadow-sm transition-colors whitespace-nowrap print-hide" title="현재 화면 명단 엑셀 다운로드"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto w-full max-h-[calc(100vh-250px)]">
+                    <table class="w-full text-left min-w-[900px]">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10 border-b border-gray-200">
+                            <tr>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'id')">ID ${getSortIcon('applicants', 'id')}</th>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'korName')">이름 ${getSortIcon('applicants', 'korName')}</th>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'nationality')">국적 ${getSortIcon('applicants', 'nationality')}</th>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'gender')">성별/생년 ${getSortIcon('applicants', 'gender')}</th>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'affiliation')">소속/한국어 ${getSortIcon('applicants', 'affiliation')}</th>
+                                <th class="p-3 text-xs text-gray-500 bg-gray-50">연락처/이메일</th>
+                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'isSelected')">상태 ${getSortIcon('applicants', 'isSelected')}</th>
+                                <th class="p-3 text-xs text-gray-500 text-right bg-gray-50">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows.length > 0 ? rows.join('') : `<tr><td colspan="8" class="p-10 text-center text-gray-400">명단이 없습니다.</td></tr>`}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+
+        function renderGroupsManagement() {
+            const sel = (state.applicants || []).filter(a=>a.isSelected);
+            const renderSel = (g) => `<select onchange="assignGrp('${g.id}', this.value)" class="text-xs border rounded p-1 focus:ring-1 focus:ring-teal-500 bg-white"><option value="none" ${!g.group?'selected':''}>미배정</option><option value="A" ${g.group==='A'?'selected':''}>A조</option><option value="B" ${g.group==='B'?'selected':''}>B조</option><option value="C" ${g.group==='C'?'selected':''}>C조</option></select>`;
+            const renderList = (arr) => arr.map(a => {
+                const isM = isMaleGender(a.gender);
+                const isF = isFemaleGender(a.gender);
+                const genderStyle = isM ? 'text-blue-500 bg-blue-50' : (isF ? 'text-pink-500 bg-pink-50' : 'text-gray-500 bg-gray-100');
+                return `<div class="flex justify-between items-center p-2 border-b text-sm bg-white hover:bg-gray-50">
+                    <button onclick="showApplicantDetail('${a.id}')" class="text-left flex flex-col hover:opacity-80 truncate max-w-[130px]">
+                        <span class="font-bold text-teal-600 truncate">${a.korName || a.engName || '-'}</span>
+                        <span class="font-bold text-[10px] ${genderStyle} px-1 rounded flex-shrink-0 mt-0.5 w-max">${a.nationality || '-'} / ${a.gender || '-'}</span>
+                    </button>${renderSel(a)}</div>`
+            }).join('') || '<div class="p-3 text-xs text-center text-gray-400 bg-white">없음</div>';
+
+            return `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
+                <div class="bg-gray-50 rounded-xl shadow-sm border p-3 flex flex-col h-[400px] lg:h-[calc(100vh-160px)]"><h4 class="font-bold border-b pb-2 text-sm text-gray-700 flex-shrink-0 flex justify-between"><span>미배정</span><span class="text-xs text-gray-400">${sel.filter(a=>!a.group).length}명</span></h4><div class="overflow-y-auto flex-1 rounded-b-lg border-x border-b border-gray-100">${renderList(sel.filter(a=>!a.group))}</div></div>
+                <div class="bg-red-50 rounded-xl shadow-sm border border-red-100 p-3 flex flex-col h-[400px] lg:h-[calc(100vh-160px)]"><h4 class="font-bold border-b border-red-200 pb-2 text-sm text-red-700 flex-shrink-0 flex justify-between"><span>A 그룹 (1~2조)</span><span class="text-xs">${sel.filter(a=>a.group==='A').length}명</span></h4><div class="overflow-y-auto flex-1 rounded-b-lg border-x border-b border-red-100">${renderList(sel.filter(a=>a.group==='A'))}</div></div>
+                <div class="bg-yellow-50 rounded-xl shadow-sm border border-yellow-100 p-3 flex flex-col h-[400px] lg:h-[calc(100vh-160px)]"><h4 class="font-bold border-b border-yellow-200 pb-2 text-sm text-yellow-700 flex-shrink-0 flex justify-between"><span>B 그룹 (3~4조)</span><span class="text-xs">${sel.filter(a=>a.group==='B').length}명</span></h4><div class="overflow-y-auto flex-1 rounded-b-lg border-x border-b border-yellow-100">${renderList(sel.filter(a=>a.group==='B'))}</div></div>
+                <div class="bg-green-50 rounded-xl shadow-sm border border-green-100 p-3 flex flex-col h-[400px] lg:h-[calc(100vh-160px)]"><h4 class="font-bold border-b border-green-200 pb-2 text-sm text-green-700 flex-shrink-0 flex justify-between"><span>C 그룹 (5~6조)</span><span class="text-xs">${sel.filter(a=>a.group==='C').length}명</span></h4><div class="overflow-y-auto flex-1 rounded-b-lg border-x border-b border-green-100">${renderList(sel.filter(a=>a.group==='C'))}</div></div>
+            </div>`;
+        }
+
+        function renderManagerView(group) {
+            const members = (state.applicants || []).filter(a => a.group === group).sort((a, b) => (a.korName || '').localeCompare(b.korName || '', 'ko-KR'));
+            const managers = state.managers[group] || [];
+            const styleMap = { 
+                A: { bg: 'bg-red-50', textTitle: 'text-red-900', textSub: 'text-red-600', btnText: 'text-red-800', btnBorder: 'border-red-200', btnHover: 'hover:bg-red-100', barCol: 'bg-red-500', subLabel: '1~2조' }, 
+                B: { bg: 'bg-yellow-50', textTitle: 'text-yellow-900', textSub: 'text-yellow-600', btnText: 'text-yellow-800', btnBorder: 'border-yellow-200', btnHover: 'hover:bg-yellow-100', barCol: 'bg-yellow-500', subLabel: '3~4조' }, 
+                C: { bg: 'bg-green-50', textTitle: 'text-green-900', textSub: 'text-green-600', btnText: 'text-green-800', btnBorder: 'border-green-200', btnHover: 'hover:bg-green-100', barCol: 'bg-green-500', subLabel: '5~6조' }
+            };
+            const theme = styleMap[group] || styleMap['A'];
+
+            let contentHtml = '';
+            if (state.managerTab === 'list') {
+                contentHtml = members.map((a, i) => {
+                    const isM = isMaleGender(a.gender);
+                    const isF = isFemaleGender(a.gender);
+                    const genderStyle = isM ? 'text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded' : (isF ? 'text-pink-600 font-bold bg-pink-50 px-1.5 py-0.5 rounded' : 'text-gray-600 font-bold bg-gray-100 px-1.5 py-0.5 rounded');
+                    
+                    return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="p-4 text-xs text-gray-400 text-center">${i+1}</td>
+                        <td class="p-3 text-center"><button onclick="toggleAttendance('${a.id}')" class="px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm ${a.isAttended ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">${a.isAttended ? '<i class="fa-solid fa-check mr-1"></i>출석' : '미출결'}</button></td>
+                        <td class="p-4 text-xs font-bold text-gray-600 text-center">${a.team || '-'}</td>
+                        <td class="p-4 whitespace-nowrap">
+                            <button onclick="showApplicantDetail('${a.id}')" class="text-left flex flex-col hover:opacity-80 transition-opacity">
+                                <span class="text-blue-600 font-bold flex items-center gap-1">${a.korName || '-'} <i class="fa-solid fa-magnifying-glass text-[10px] text-blue-400"></i></span>
+                                <span class="text-[10px] text-gray-500">${a.engName || '-'}</span>
+                            </button>
+                        </td>
+                        <td class="p-4 text-sm whitespace-nowrap"><span class="font-bold text-gray-800 mr-2">${a.nationality || '-'}</span><span class="${genderStyle} text-[10px]">${a.gender || '-'}</span></td>
+                        <td class="p-4 text-sm"><div class="font-medium">${a.affiliation || '-'}</div><div class="text-[10px] text-teal-600 font-bold mt-0.5">한국어: ${a.korean||'-'}</div></td>
+                        <td class="p-4 text-sm text-blue-600 font-medium"><a href="tel:${a.phone}" class="hover:underline flex items-center gap-1"><i class="fa-solid fa-phone text-[10px] text-gray-400"></i>${a.phone || '-'}</a></td>
+                    </tr>`
+                }).join('') || `<tr><td colspan="7" class="p-10 text-center text-gray-400">배정된 인원이 없습니다.</td></tr>`;
+                
+                contentHtml = `<div class="overflow-auto w-full bg-white rounded-b-2xl max-h-[calc(100vh-320px)]"><table class="w-full text-left min-w-[700px]"><thead class="bg-gray-50 sticky top-0 z-10 shadow-sm border-b border-gray-200"><tr><th class="p-3 text-xs w-12 text-center bg-gray-50">No</th><th class="p-3 text-xs w-16 text-center bg-gray-50">출결</th><th class="p-3 text-xs w-16 text-center bg-gray-50">조 편성</th><th class="p-3 text-xs bg-gray-50">이름 (가나다순)</th><th class="p-3 text-xs bg-gray-50">국적/성별</th><th class="p-3 text-xs bg-gray-50">소속/한국어</th><th class="p-3 text-xs bg-gray-50">연락처</th></tr></thead><tbody>${contentHtml}</tbody></table></div>`;
+            } else if (state.managerTab === 'team') {
+                const teams = {}; members.forEach(m => { const t = m.team || '미배정'; if(!teams[t]) teams[t] = []; teams[t].push(m); });
+                const sortedTeamNames = Object.keys(teams).sort((a, b) => {
+                    if(a === '미배정') return 1; if(b === '미배정') return -1;
+                    return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
+                });
+
+                let teamCards = '';
+                sortedTeamNames.forEach(tName => {
+                    const ppl = teams[tName];
+                    const isUnassigned = tName === '미배정';
+                    let pplHtml = ppl.map(p => {
+                        const isM = isMaleGender(p.gender);
+                        const isF = isFemaleGender(p.gender);
+                        const genderStyle = isM ? 'text-blue-600 bg-blue-50' : (isF ? 'text-pink-600 bg-pink-50' : 'text-gray-600 bg-gray-100');
+                        return `<div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1">
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleAttendance('${p.id}')" class="w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm flex-shrink-0 ${p.isAttended ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}" title="출석 체크"><i class="fa-solid fa-check text-[10px]"></i></button>
+                                <button onclick="showApplicantDetail('${p.id}')" class="text-sm font-bold text-gray-800 hover:text-blue-600 transition-colors text-left flex items-center gap-1">${p.korName || p.engName} <span class="text-[10px] font-bold ${genderStyle} px-1 rounded ml-1">${p.gender || '-'}</span></button>
+                            </div>
+                            <button onclick="promptTeam('${p.id}', '${tName}')" class="text-xs text-blue-500 hover:underline print-hide">이동</button>
+                        </div>`
+                    }).join('');
+                    teamCards += `<div class="bg-white border ${isUnassigned ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-xl p-4 shadow-sm break-inside-avoid"><div class="flex justify-between items-center mb-3 border-b pb-2"><h4 class="font-bold ${isUnassigned ? 'text-red-600' : 'text-gray-800'}"><i class="fa-solid fa-users-viewfinder mr-1 text-gray-400"></i> ${tName}</h4><span class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">${ppl.length}명</span></div><div class="flex flex-col gap-1">${pplHtml}</div></div>`;
+                });
+                contentHtml = `<div class="p-4 md:p-5 bg-gray-50 rounded-b-2xl border-t border-gray-200 w-full overflow-auto max-h-[calc(100vh-320px)]"><div class="mb-4 text-sm text-gray-600 bg-white p-3 border rounded-lg flex items-center gap-2 print-hide"><i class="fa-solid fa-circle-info text-blue-500"></i>참가자 이름을 클릭하면 상세 정보를 볼 수 있습니다. 좌측 체크 버튼으로 출결을 관리하세요.</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${teamCards || '<div class="col-span-full text-center text-gray-400 p-8">인원이 없습니다.</div>'}</div></div>`;
+            } else {
+                const rooms = {}; members.forEach(m => { const r = m.room || '미배정'; if(!rooms[r]) rooms[r] = []; rooms[r].push(m); });
+                let roomCards = '';
+                for(const [rName, ppl] of Object.entries(rooms)) {
+                    const isUnassigned = rName === '미배정';
+                    let pplHtml = ppl.map(p => {
+                        const isM = isMaleGender(p.gender);
+                        const isF = isFemaleGender(p.gender);
+                        const genderStyle = isM ? 'text-blue-600 bg-blue-50' : (isF ? 'text-pink-600 bg-pink-50' : 'text-gray-600 bg-gray-100');
+                        return `<div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1">
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleAttendance('${p.id}')" class="w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm flex-shrink-0 ${p.isAttended ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}" title="출석 체크"><i class="fa-solid fa-check text-[10px]"></i></button>
+                                <button onclick="showApplicantDetail('${p.id}')" class="text-sm font-bold text-gray-800 hover:text-blue-600 transition-colors text-left flex items-center gap-1">${p.korName || p.engName} <span class="text-[10px] font-bold ${genderStyle} px-1 rounded ml-1">${p.gender || '-'}</span></button>
+                            </div>
+                            <button onclick="promptRoom('${p.id}', '${rName}')" class="text-xs text-blue-500 hover:underline print-hide">이동</button>
+                        </div>`
+                    }).join('');
+                    if (!isUnassigned && ppl.length < 2) { for(let i=0; i < (2 - ppl.length); i++) { pplHtml += `<div class="bg-gray-50/50 p-2 rounded border border-dashed border-gray-200 mb-1 text-center text-xs text-gray-400 h-[38px] flex items-center justify-center print-hide">빈 자리</div>`; } }
+                    roomCards += `<div class="bg-white border ${isUnassigned ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-xl p-4 shadow-sm break-inside-avoid"><div class="flex justify-between items-center mb-3 border-b pb-2"><h4 class="font-bold ${isUnassigned ? 'text-red-600' : 'text-gray-800'}">${rName}</h4><span class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">${ppl.length} / ${isUnassigned ? '-' : '2'}명</span></div><div class="flex flex-col gap-1">${pplHtml}</div></div>`;
+                }
+                contentHtml = `<div class="p-4 md:p-5 bg-gray-50 rounded-b-2xl border-t border-gray-200 w-full overflow-auto max-h-[calc(100vh-320px)]"><div class="mb-4 text-sm text-gray-600 bg-white p-3 border rounded-lg flex items-center gap-2 print-hide"><i class="fa-solid fa-circle-info text-blue-500"></i>참가자 이름을 클릭하면 상세 정보를 볼 수 있습니다. 좌측 체크 버튼으로 출결을 관리하세요.</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${roomCards || '<div class="col-span-full text-center text-gray-400 p-8">인원이 없습니다.</div>'}</div></div>`;
+            }
+
+            const linkedLocationText = autoLinkPhoneNumbers(state.locations[group] || '미정');
+            const mgrList = managers.map(m => `<a href="tel:${m.phone}" class="inline-flex items-center gap-1 bg-white/50 border ${theme.btnBorder} ${theme.btnText} px-2.5 py-1 rounded text-xs font-bold mr-2 mb-1 ${theme.btnHover} transition-colors shadow-sm print-hide" title="${m.phone} 연결"><span>${m.role} ${m.name}</span><i class="fa-solid fa-phone ml-0.5 text-[10px] opacity-70"></i></a><span class="hidden print-inline text-sm mr-2 font-bold text-gray-800">${m.role} ${m.name}</span>`).join('');
+            
+            const attendedCount = members.filter(m => m.isAttended).length;
+            const attendanceRate = members.length === 0 ? 0 : Math.round((attendedCount / members.length) * 100);
+
+            return `
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6">
+                <div class="${theme.bg} p-4 md:p-6 rounded-t-2xl flex-shrink-0">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
+                        <div>
+                            <h3 class="text-xl md:text-2xl font-bold ${theme.textTitle} mb-2">${group} 그룹 <span class="text-sm font-semibold opacity-80">(${theme.subLabel})</span> <span class="text-sm md:text-base font-medium ${theme.textSub} ml-2">총 ${members.length}명</span></h3>
+                            <div class="flex flex-wrap">${mgrList}</div>
+                        </div>
+                        <button onclick="window.print()" class="bg-white border ${theme.btnBorder} ${theme.textTitle} px-4 py-2 rounded-lg text-sm shadow-sm ${theme.btnHover} flex items-center gap-2 whitespace-nowrap transition-colors print-hide"><i class="fa-solid fa-print"></i> 명단 인쇄</button>
+                    </div>
+                    
+                    <div class="mt-4 bg-white/60 p-4 rounded-xl border ${theme.btnBorder} flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full ${theme.bg} flex items-center justify-center ${theme.textSub} flex-shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+                        <div class="flex-1">
+                            <span class="text-xs font-bold ${theme.textSub} uppercase block mb-1">방문 예정 탐방지</span>
+                            <span class="text-sm font-medium text-gray-800 whitespace-pre-line leading-snug block">${linkedLocationText}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 bg-white p-3 rounded-xl border ${theme.btnBorder} shadow-sm print-hide">
+                        <div class="flex justify-between items-end mb-1.5"><span class="text-xs font-bold text-gray-600">현재 출석률</span><span class="text-sm font-bold ${theme.textTitle}">${attendedCount} / ${members.length}명 (${attendanceRate}%)</span></div>
+                        <div class="w-full bg-gray-200 rounded-full h-2"><div class="${theme.barCol} h-2 rounded-full transition-all duration-500" style="width: ${attendanceRate}%"></div></div>
+                    </div>
+
+                    <div class="flex gap-6 mt-5 print-hide overflow-x-auto">
+                        <button onclick="setManagerTab('list')" class="pb-2 text-sm whitespace-nowrap transition-colors ${state.managerTab === 'list' ? 'tab-active' : 'tab-inactive'}">명단 보기</button>
+                        <button onclick="setManagerTab('team')" class="pb-2 text-sm whitespace-nowrap transition-colors ${state.managerTab === 'team' ? 'tab-active' : 'tab-inactive'}">조 편성 관리</button>
+                        <button onclick="setManagerTab('room')" class="pb-2 text-sm whitespace-nowrap transition-colors ${state.managerTab === 'room' ? 'tab-active' : 'tab-inactive'}">방 배정 관리 (2인 1실)</button>
+                    </div>
+                </div>
+                ${contentHtml}
+            </div>`;
+        }
+
+        function renderAllRooms() {
+            const rooms = {};
+            (state.applicants || []).forEach(a => {
+                if (!a.isSelected) return;
+                const rName = a.room || '미배정';
+                if (rName === '미배정') return; 
+                if (!rooms[rName]) rooms[rName] = [];
+                rooms[rName].push(a);
+            });
+            const sortedRoomNames = Object.keys(rooms).sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+            let allCards = '';
+
+            sortedRoomNames.forEach(rName => {
+                const ppl = rooms[rName];
+                let pplHtml = ppl.map(p => {
+                    const isM = isMaleGender(p.gender);
+                    const isF = isFemaleGender(p.gender);
+                    const genderStyle = isM ? 'text-blue-600 bg-blue-50' : (isF ? 'text-pink-600 bg-pink-50' : 'text-gray-600 bg-gray-100');
+                    let groupBadge = '';
+                    if (p.group === 'A') groupBadge = '<span class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded ml-1.5 font-bold">A</span>';
+                    else if (p.group === 'B') groupBadge = '<span class="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded ml-1.5 font-bold">B</span>';
+                    else if (p.group === 'C') groupBadge = '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded ml-1.5 font-bold">C</span>';
+
+                    return `<div class="flex justify-between items-center bg-gray-50 px-2 py-1.5 rounded border border-gray-100 mb-1 text-sm hover:bg-gray-100 transition-colors"><div class="flex items-center truncate"><span class="truncate text-gray-800">${p.korName || p.engName}</span>${groupBadge}</div><span class="text-[10px] font-bold ${genderStyle} px-1 rounded">${p.gender || '-'}</span></div>`
+                }).join('');
+                if (ppl.length < 2) { for(let i=0; i < (2 - ppl.length); i++) { pplHtml += `<div class="bg-gray-50/50 p-1.5 rounded border border-dashed border-gray-200 mb-1 text-center text-xs text-gray-400 h-[33px] flex items-center justify-center print-hide">빈 자리</div>`; } }
+                allCards += `<div class="bg-white border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow break-inside-avoid"><div class="flex justify-between items-center mb-2 border-b border-blue-100 pb-1.5"><h4 class="font-bold text-sm text-blue-900"><i class="fa-solid fa-door-closed mr-1 text-blue-400"></i> ${rName}</h4><span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">${ppl.length}/2</span></div><div class="flex flex-col">${pplHtml}</div></div>`;
+            });
+
+            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6"><div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-4 mb-4 gap-4 flex-shrink-0"><div><h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-bed text-blue-500 mr-2"></i> 전체 방 배정 현황 (호실 기준)</h3><p class="text-sm text-gray-500 mt-1 print-hide">그룹 구분 없이 <strong>배정된 방 번호(호실)를 기준</strong>으로 묶어 보여줍니다.</p></div><span class="bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded-full text-xs font-bold shadow-sm self-end md:self-auto">사용 중인 방: ${sortedRoomNames.length}개</span></div><div class="w-full"><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">${allCards || '<div class="col-span-full flex flex-col items-center justify-center text-gray-400 py-20"><i class="fa-solid fa-bed text-4xl mb-3 text-gray-200"></i><p>배정된 방이 없습니다.</p></div>'}</div></div></div>`;
+        }
+
+        function renderProgramViewer() {
+            if (!state.programLink) return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col p-10 mb-6 items-center justify-center text-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-2xl mb-4"><i class="fa-solid fa-file-pdf"></i></div><h3 class="text-lg font-bold text-gray-800 mb-2">등록된 행사 프로그램이 없습니다.</h3><p class="text-sm text-gray-500">구글 시트(시트4)에 유효한 구글 드라이브 링크가 입력되어 있는지 확인해주세요.</p></div>`;
+            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-160px)] p-2 relative overflow-hidden mb-6"><div class="mb-3 text-sm text-gray-600 bg-teal-50 p-3 border border-teal-100 rounded-xl flex items-center justify-between gap-4 flex-wrap flex-shrink-0"><div class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-teal-500 flex-shrink-0"></i><span class="break-keep">캠프 진행을 위한 행사 프로그램 일정표 뷰어입니다.</span></div><a href="${state.programLink.replace('/preview', '/view')}" target="_blank" class="text-xs bg-white text-teal-600 border border-teal-200 px-4 py-2 rounded-lg hover:bg-teal-100 transition-colors font-bold flex items-center gap-1.5 shadow-sm whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창에서 보기</a></div><div class="flex-1 w-full relative bg-gray-100 rounded-xl border border-gray-200 overflow-hidden"><iframe src="${state.programLink}" class="absolute top-0 left-0 w-full h-full border-0" allow="autoplay"></iframe></div></div>`;
+        }
+
+        function autoLinkPhoneNumbers(text) {
+            if (!text) return '';
+            const phoneRegex = /(01[016789]-?\d{3,4}-?\d{4})/g;
+            return text.replace(phoneRegex, function(match) {
+                const cleanNumber = match.replace(/-/g, '');
+                return `<a href="tel:${cleanNumber}" class="text-teal-600 hover:underline font-bold bg-teal-50 px-1 rounded inline-flex items-center gap-1"><i class="fa-solid fa-phone text-[10px]"></i>${match}</a>`;
+            });
+        }
+
+        function toggleSelection(id) {
+            requireAuthForAction(() => {
+                const app = state.applicants.find(a=>a.id===id);
+                if(!app) return;
+                const cnt = state.applicants.filter(a=>a.isSelected).length;
+                if(!app.isSelected && cnt >= TARGET_COUNT) return showToast('최대 선발 인원 초과', 'error');
+                app.isSelected = !app.isSelected;
+                if(!app.isSelected) { app.group = null; app.room = null; app.team = null; app.isAttended = false; }
+                saveToLocalStorage(); render(); updateSheetData(app);
+            });
+        }
+
+        function toggleAttendance(id) {
+            requireAuthForAction(() => {
+                const app = state.applicants.find(a=>a.id===id);
+                if(!app) return;
+                app.isAttended = !app.isAttended;
+                saveToLocalStorage(); render(); updateSheetData(app);
+                showToast(app.isAttended ? '출석 처리되었습니다.' : '출석이 취소되었습니다.', 'success');
+            });
+        }
+
+        function assignGrp(id, grp) {
+            requireAuthForAction(() => {
+                const app = state.applicants.find(a=>a.id===id);
+                if(app) { app.group = grp==='none'?null:grp; saveToLocalStorage(); render(); updateSheetData(app); }
+            });
+        }
+
+        function promptTeam(id, currentTeam) {
+            requireAuthForAction(() => {
+                const app = state.applicants.find(a=>a.id===id);
+                if(!app) return;
+                document.getElementById('input-modal-title').innerText = '조 편성 변경';
+                document.getElementById('input-modal-message').innerText = `${app.korName || app.engName} 님의 조(Team)를 입력하세요. (예: 1조)`;
+                const input = document.getElementById('input-modal-value');
+                input.value = currentTeam === '미배정' ? '' : currentTeam;
+                
+                document.getElementById('input-modal-confirm').onclick = () => {
+                    const val = input.value.trim();
+                    app.team = val === '' ? null : val;
+                    saveToLocalStorage(); render(); closeInputModal();
+                    showToast('조 편성이 수정되었습니다.', 'success');
+                    updateSheetData(app);
+                };
+                
+                document.getElementById('input-modal').classList.remove('hidden');
+                setTimeout(() => input.focus(), 100);
+            });
+        }
+
+        function promptRoom(id, currentRoom) {
+            requireAuthForAction(() => {
+                const app = state.applicants.find(a=>a.id===id);
+                if(!app) return;
+                document.getElementById('input-modal-title').innerText = '방 배정 변경';
+                document.getElementById('input-modal-message').innerText = `${app.korName || app.engName} 님의 방 번호를 입력하세요. (예: 101호)`;
+                const input = document.getElementById('input-modal-value');
+                input.value = currentRoom === '미배정' ? '' : currentRoom;
+                
+                document.getElementById('input-modal-confirm').onclick = () => {
+                    const val = input.value.trim();
+                    app.room = val === '' ? null : val;
+                    saveToLocalStorage(); render(); closeInputModal();
+                    showToast('방 배정이 수정되었습니다.', 'success');
+                    updateSheetData(app);
+                };
+                
+                document.getElementById('input-modal').classList.remove('hidden');
+                setTimeout(() => input.focus(), 100);
+            });
+        }
+
+        function showApplicantDetail(id) {
+            const a = (state.applicants || []).find(x => x.id === id);
+            if(!a) return;
+            
+            const formattedId = !isNaN(a.id) && String(a.id).trim() !== '' ? String(a.id).padStart(3, '0') : a.id;
+
+            document.getElementById('detail-name-avatar').innerText = (a.korName || a.engName || '?').charAt(0);
+            document.getElementById('detail-kor-name').innerText = a.korName || '-'; 
+            document.getElementById('detail-eng-name').innerText = a.engName || '-'; 
+            document.getElementById('detail-id-date').innerText = `${formattedId} | ${a.date} 지원`;
+            
+            document.getElementById('detail-nationality').innerText = a.nationality || '-';
+            document.getElementById('detail-personal').innerText = `${a.gender || '-'} / ${a.dob || '-'}`;
+            document.getElementById('detail-korean').innerText = a.korean || '-';
+            document.getElementById('detail-affiliation').innerText = a.affiliation || '-';
+
+            document.getElementById('detail-phone').innerHTML = `<i class="fa-solid fa-phone text-xs text-blue-400"></i> ${a.phone || '-'}`; document.getElementById('detail-phone').href = `tel:${a.phone}`;
+            document.getElementById('detail-email').innerHTML = `<i class="fa-solid fa-envelope text-xs text-blue-400"></i> ${a.email || '-'}`; document.getElementById('detail-email').href = `mailto:${a.email}`;
+            document.getElementById('detail-kakao').innerText = a.kakao || '-';
+            
+            // SNS Link auto parse
+            let snsContent = a.sns || '-';
+            if (snsContent !== '-' && (snsContent.includes('http://') || snsContent.includes('https://') || snsContent.includes('www.'))) {
+                const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+                snsContent = snsContent.replace(urlRegex, function(url) {
+                    const href = url.startsWith('http') ? url : 'http://' + url;
+                    return `<a href="${href}" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-1"><i class="fa-solid fa-link text-[10px]"></i>링크 열기</a>`;
+                });
+            }
+            document.getElementById('detail-sns').innerHTML = snsContent;
+
+            document.getElementById('detail-motivation').innerText = a.motivation || '-';
+            document.getElementById('detail-companion').innerText = a.companion || '없음';
+            document.getElementById('detail-visa').innerText = a.visa || '-';
+            document.getElementById('detail-route').innerText = a.route || '-';
+
+            document.getElementById('detail-status-badge').innerHTML = a.isSelected ? `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-800 border border-teal-200 shadow-sm"><i class="fa-solid fa-check"></i> 선정완료 ${a.group ? `(${a.group}그룹)` : ''}</span>` : `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 border border-gray-200 shadow-sm">선정 대기</span>`;
+            
+            const noteBadge = document.getElementById('detail-note-badge');
+            if (a.note && a.note.trim() !== '') {
+                noteBadge.innerText = `💡 ${a.note}`;
+                noteBadge.classList.remove('hidden');
+            } else { noteBadge.classList.add('hidden'); }
+
+            document.getElementById('applicant-modal').classList.remove('hidden');
+        }
+
+        function closeApplicantModal() { document.getElementById('applicant-modal').classList.add('hidden'); }
+        
+        function showToast(msg, type='info') {
+            const container = document.getElementById('toast-container'); const toast = document.createElement('div');
+            const col = {success:'bg-green-600', error:'bg-red-600', info:'bg-teal-600'}[type];
+            toast.className = `toast-enter ${col} text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium print-hide`; toast.innerText = msg;
+            container.appendChild(toast); setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(()=>toast.remove(), 300); }, 3000);
+        }
+        
+        function closeInputModal() { document.getElementById('input-modal').classList.add('hidden'); }
+        function closeModal() { document.getElementById('message-modal').classList.add('hidden'); }
+        
+        // 검색어 라이브 업데이트 및 포커스 유지
+        function updateSearch(val) {
+            state.searchQuery = val || "";
+            render();
+            const input = document.getElementById('applicant-search');
+            if (input) {
+                input.focus();
+                const len = input.value.length;
+                input.setSelectionRange(len, len);
+            }
+        }
+
+        function downloadCSV() {
+            const filterType = state.applicantFilter || 'all';
+            let filteredApps = (state.applicants || []).filter(a => { 
+                let matchFilter = true;
+                if (filterType === 'selected') matchFilter = a.isSelected; 
+                if (filterType === 'waiting') matchFilter = !a.isSelected; 
+                let matchSearch = true;
+                if (state.searchQuery) {
+                    const query = state.searchQuery.toLowerCase();
+                    matchSearch = (a.korName || "").toLowerCase().includes(query) || (a.engName || "").toLowerCase().includes(query) || (a.phone || "").includes(query) || (a.affiliation || "").toLowerCase().includes(query);
+                }
+                return matchFilter && matchSearch;
+            });
+
+            if(filteredApps.length === 0) return showToast('다운로드할 데이터가 없습니다.', 'error');
+
+            let csvContent = "\uFEFF"; // 한글 깨짐 방지 BOM
+            csvContent += "지원번호,국문이름,영문이름,국적,성별,생년월일,소속,연락처,이메일,한국어능력,상태,그룹,방배정,조편성\n";
+            
+            filteredApps.forEach(a => {
+                const row = [
+                    a.id, 
+                    `"${a.korName || ''}"`, 
+                    `"${a.engName || ''}"`,
+                    `"${a.nationality || ''}"`, 
+                    a.gender || '', 
+                    a.dob || '',
+                    `"${a.affiliation || ''}"`, 
+                    a.phone || '', 
+                    a.email || '', 
+                    a.korean || '',
+                    a.isSelected ? '선정' : '대기',
+                    a.group || '미배정', 
+                    a.room || '미배정', 
+                    a.team || '미배정'
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `K-브랜드캠프_명단_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('엑셀(CSV) 파일이 다운로드되었습니다.', 'success');
+        }
+    </script>
+</body>
+</html>
