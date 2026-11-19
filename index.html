@@ -815,6 +815,132 @@
             return s.includes('남') || s.includes('male') || s === 'm';
         }
 
+        // HTML 특수문자 이스케이프 헬퍼
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        // 생년월일(dob)에서 만 나이를 추출하는 헬퍼 함수
+        function parseAgeFromDob(dob) {
+            if (!dob) return null;
+            const raw = String(dob).trim();
+            if (!raw || raw === '-') return null;
+
+            const today = new Date();
+            const curYear = today.getFullYear();
+            const curMonth = today.getMonth() + 1;
+            const curDay = today.getDate();
+
+            // 1. 4자리 연도가 포함된 경우 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD, YYYY년 M월 D일 등)
+            const year4Match = raw.match(/(19\d{2}|20\d{2})/);
+            if (year4Match) {
+                const birthYear = parseInt(year4Match[1], 10);
+                if (birthYear < 1920 || birthYear > curYear) return null;
+
+                let age = curYear - birthYear;
+                const ymdMatch = raw.match(/(19\d{2}|20\d{2})\D+(\d{1,2})\D+(\d{1,2})/);
+                if (ymdMatch) {
+                    const bMonth = parseInt(ymdMatch[2], 10);
+                    const bDay = parseInt(ymdMatch[3], 10);
+                    if (bMonth >= 1 && bMonth <= 12 && bDay >= 1 && bDay <= 31) {
+                        if (curMonth < bMonth || (curMonth === bMonth && curDay < bDay)) age--;
+                    }
+                } else {
+                    const mdyMatch = raw.match(/^(\d{1,2})\D+(\d{1,2})\D+(19\d{2}|20\d{2})/);
+                    if (mdyMatch) {
+                        const bMonth = parseInt(mdyMatch[1], 10);
+                        const bDay = parseInt(mdyMatch[2], 10);
+                        if (bMonth >= 1 && bMonth <= 12 && bDay >= 1 && bDay <= 31) {
+                            if (curMonth < bMonth || (curMonth === bMonth && curDay < bDay)) age--;
+                        }
+                    } else {
+                        const digits8 = raw.replace(/\D/g, '');
+                        if (digits8.length === 8 && digits8.startsWith(String(birthYear))) {
+                            const bMonth = parseInt(digits8.slice(4, 6), 10);
+                            const bDay = parseInt(digits8.slice(6, 8), 10);
+                            if (bMonth >= 1 && bMonth <= 12 && bDay >= 1 && bDay <= 31) {
+                                if (curMonth < bMonth || (curMonth === bMonth && curDay < bDay)) age--;
+                            }
+                        }
+                    }
+                }
+                return age >= 0 && age <= 100 ? age : null;
+            }
+
+            // 2. 6자리 숫자 생년월일 (YYMMDD)
+            const digitsOnly = raw.replace(/\D/g, '');
+            if (digitsOnly.length === 6) {
+                const yy = parseInt(digitsOnly.slice(0, 2), 10);
+                const mm = parseInt(digitsOnly.slice(2, 4), 10);
+                const dd = parseInt(digitsOnly.slice(4, 6), 10);
+                const birthYear = yy <= (curYear % 100) ? 2000 + yy : 1900 + yy;
+                let age = curYear - birthYear;
+                if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+                    if (curMonth < mm || (curMonth === mm && curDay < dd)) age--;
+                }
+                return age >= 0 && age <= 100 ? age : null;
+            }
+
+            // 3. 숫자만 나이로 직접 기입된 경우 (예: "25", "25세")
+            const ageDirect = raw.match(/^(\d{2})\s*세?$/);
+            if (ageDirect) {
+                const n = parseInt(ageDirect[1], 10);
+                if (n >= 10 && n <= 99) return n;
+            }
+            return null;
+        }
+
+        // 만 나이를 연령대 구간으로 분류
+        function getAgeGroup(age) {
+            if (age === null || age === undefined) return '미기재';
+            if (age < 20) return '10대';
+            if (age < 25) return '20~24세';
+            if (age < 30) return '25~29세';
+            if (age < 35) return '30~34세';
+            if (age < 40) return '35~39세';
+            return '40세 이상';
+        }
+
+        // 소속(및 체류비자 보조) 텍스트를 대분류(대학생, 대학원생, 회사원 등)로 자동 분류
+        function classifyAffiliation(affiliation, visa) {
+            const aff = String(affiliation || '').trim();
+            const lower = aff.toLowerCase();
+            const visaUp = String(visa || '').toUpperCase();
+
+            const hasAny = (keywords) => keywords.some(k => lower.includes(k));
+
+            if (aff && aff !== '-' && lower !== 'none' && lower !== 'n/a' && aff !== '없음') {
+                // 1. 대학원생
+                if (hasAny(['대학원', '석사', '박사', '원생', 'graduate', 'master', 'phd', 'ph.d', 'mba', 'doctoral', 'postdoc', 'gsis'])) {
+                    return '대학원생';
+                }
+                // 2. 외교/공공/교육기관
+                if (hasAny(['대사관', '영사관', '외교', '공관', '정부', '시청', '구청', '공사', '공단', '재단', '협회', '센터', '연구원', '교수', '교사', '원어민', '강사', '국제기구', 'embassy', 'consulate', 'diplomat', 'ministry', 'government', 'foundation', 'association', 'ngo', 'unesco', 'koica', 'kotra', 'professor', 'teacher', 'lecturer', 'instructor', 'researcher'])) {
+                    return '외교/공공/교육';
+                }
+                // 3. 대학생 (유학생·어학당 포함)
+                if (hasAny(['대학', '학부', '학생', '유학생', '어학당', '어학원', '캠퍼스', '전공', '학과', 'univ', 'university', 'college', 'student', 'undergraduate', 'bachelor', 'campus', 'school', 'academy', 'language', 'kaist', 'postech', 'snu', 'yonsei', 'hanyang', 'skku', 'khu', 'ewha', 'sogang', 'cau', 'hufs', 'konkuk', 'inha', 'dongguk', 'hongik', 'kookmin', 'soongsil', 'sejong', 'dankook', 'ajou', '서울대', '연세대', '고려대', '한양대', '성균관', '경희대', '이화여대', '서강대', '중앙대', '외대', '건국대', '인하대', '인천대', '동국대', '홍익대', '국민대', '숭실대', '세종대', '단국대', '아주대', '부산대', '경북대', '전남대', '충남대', '가천대', '명지대', '상명대', '숙명여대', '성신여대', '서울시립대', '가톨릭대', '경기대'])) {
+                    return '대학생';
+                }
+                // 4. 프리랜서/크리에이터/자영업
+                if (hasAny(['프리랜서', '인플루언서', '크리에이터', '유튜버', '유튜브', '틱톡', '블로거', '모델', '배우', '방송', '작가', '아티스트', '자영업', '개인사업', '창업', 'freelanc', 'influencer', 'creator', 'youtub', 'tiktok', 'blogger', 'model', 'actor', 'actress', 'artist', 'writer', 'self-employ', 'self employ', 'entrepreneur', 'founder', 'owner', 'startup'])) {
+                    return '프리랜서/크리에이터';
+                }
+                // 5. 회사원/직장인
+                if (hasAny(['회사', '직장', '(주)', '주식회사', '㈜', '기업', '법인', '그룹', '코리아', '글로벌', '상사', '무역', '물류', '제조', '유통', '은행', '증권', '보험', '병원', '호텔', '리조트', '항공', '엔지니어', '개발자', '매니저', '마케터', '디자이너', '사원', '대리', '과장', '차장', '부장', '팀장', '실장', '주재원', '인턴', '근무', 'co.', 'ltd', 'inc', 'corp', 'company', 'korea', 'global', 'group', 'samsung', 'hyundai', 'lg', 'naver', 'kakao', 'coupang', 'cj', 'lotte', 'posco', 'hanwha', 'bank', 'hotel', 'hospital', 'office', 'worker', 'employee', 'staff', 'manager', 'engineer', 'developer', 'marketer', 'designer', 'agency', 'studio', 'media', 'consulting', 'tech', 'solutions', 'logistics', 'trading', 'international', 'holdings', 'networks', 'systems', 'electronics', 'motors', 'bio', 'pharma', 'cosmetics', 'beauty', 'fashion', 'food', 'intern', 'analyst', 'specialist', 'director', 'consultant', 'sales', 'marketing'])) {
+                    return '회사원';
+                }
+            }
+
+            // 소속 텍스트만으로 구분이 모호할 경우 체류비자 보조 판별
+            if (visaUp.includes('D-2') || visaUp.includes('D2') || visaUp.includes('D-4') || visaUp.includes('D4')) return '대학생';
+            if (visaUp.includes('E-7') || visaUp.includes('E7') || visaUp.includes('D-7') || visaUp.includes('D-8') || visaUp.includes('D-9') || visaUp.includes('E-9')) return '회사원';
+            if (visaUp.includes('A-1') || visaUp.includes('A-2') || visaUp.includes('E-1') || visaUp.includes('E-2') || visaUp.includes('E-3')) return '외교/공공/교육';
+            if (visaUp.includes('E-6')) return '프리랜서/크리에이터';
+
+            return '기타';
+        }
+
         function render() {
             try {
                 const content = document.getElementById('content-area'); const title = document.getElementById('page-title');
@@ -848,25 +974,79 @@
                 Unassigned: selected.filter(a => !a.group).length 
             };
 
-            // 소속별 인원 리스트 UI 생성
-            let schoolHtml = '';
+            // 국적 수, 평균 나이, 성별 요약, 소속 대분류 통계 사전 집계
+            const natSet = new Set();
+            const validAges = [];
+            let mCount = 0, fCount = 0;
+
+            const affCategoryMeta = {
+                '대학생': { icon: 'fa-graduation-cap', color: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700' },
+                '대학원생': { icon: 'fa-user-graduate', color: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-700' },
+                '회사원': { icon: 'fa-briefcase', color: 'bg-teal-500', badge: 'bg-teal-50 text-teal-700' },
+                '프리랜서/크리에이터': { icon: 'fa-camera', color: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700' },
+                '외교/공공/교육': { icon: 'fa-landmark', color: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
+                '기타': { icon: 'fa-ellipsis', color: 'bg-gray-400', badge: 'bg-gray-100 text-gray-600' }
+            };
+            const affCatMap = {};
+            const affSamplesMap = {};
+
+            selected.forEach(a => {
+                const nat = (a.nationality || '').trim();
+                if (nat && nat !== '-') natSet.add(nat);
+
+                const age = parseAgeFromDob(a.dob);
+                if (age !== null) validAges.push(age);
+
+                if (isMaleGender(a.gender)) mCount++;
+                else if (isFemaleGender(a.gender)) fCount++;
+
+                const cat = classifyAffiliation(a.affiliation, a.visa);
+                affCatMap[cat] = (affCatMap[cat] || 0) + 1;
+                if (!affSamplesMap[cat]) affSamplesMap[cat] = {};
+                const rawAff = (a.affiliation || '').trim();
+                if (rawAff && rawAff !== '-') {
+                    affSamplesMap[cat][rawAff] = (affSamplesMap[cat][rawAff] || 0) + 1;
+                }
+            });
+
+            const avgAgeText = validAges.length > 0
+                ? `평균 만 ${(validAges.reduce((s, v) => s + v, 0) / validAges.length).toFixed(1)}세`
+                : '생년월일 기준';
+
+            const genderTotal = mCount + fCount;
+            const mPct = genderTotal > 0 ? Math.round((mCount / genderTotal) * 100) : 0;
+            const fPct = genderTotal > 0 ? Math.round((fCount / genderTotal) * 100) : 0;
+
+            // 소속 대분류 HTML 생성 (비율 프로그레스 바 + 대표 소속 미리보기)
+            let affiliationCatHtml = '';
             if (selected.length > 0) {
-                const schMap = {};
-                selected.forEach(a => { const aff = (a.affiliation || '미기재').trim(); schMap[aff] = (schMap[aff]||0) + 1; });
-                const sortedSch = Object.entries(schMap).sort((a,b) => b[1] - a[1]);
-                const maxCnt = sortedSch.length > 0 ? sortedSch[0][1] : 1;
-                
-                schoolHtml = sortedSch.map(s => {
-                    const pctBar = (s[1] / maxCnt) * 100;
+                const sortedCats = Object.entries(affCatMap).sort((a, b) => b[1] - a[1]);
+                affiliationCatHtml = sortedCats.map(([cat, count]) => {
+                    const meta = affCategoryMeta[cat] || affCategoryMeta['기타'];
+                    const ratio = Math.round((count / selected.length) * 100);
+                    const topSamples = Object.entries(affSamplesMap[cat] || {})
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(x => escapeHtml(x[0]))
+                        .join(', ');
                     return `
-                    <div class="mb-3 hover:bg-gray-50 p-1.5 rounded transition-colors">
-                        <div class="flex justify-between text-xs mb-1.5">
-                            <span class="font-bold text-gray-700 truncate pr-2" title="${s[0]}">${s[0]}</span>
-                            <span class="font-bold text-teal-600 flex-shrink-0">${s[1]}명</span>
+                    <div class="mb-3.5 last:mb-0 p-2 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                        <div class="flex justify-between items-center text-xs mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-6 h-6 rounded-lg ${meta.badge} flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid ${meta.icon} text-[11px]"></i>
+                                </span>
+                                <span class="font-bold text-gray-800 truncate">${cat}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <span class="font-bold text-gray-900">${count}명</span>
+                                <span class="text-[11px] font-semibold text-gray-400">(${ratio}%)</span>
+                            </div>
                         </div>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5">
-                            <div class="bg-teal-500 h-1.5 rounded-full" style="width: ${pctBar}%"></div>
+                        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div class="${meta.color} h-2 rounded-full transition-all duration-500" style="width: ${ratio}%"></div>
                         </div>
+                        ${topSamples ? `<p class="text-[10px] text-gray-400 mt-1 truncate" title="${topSamples}">주요 소속: ${topSamples}</p>` : ''}
                     </div>`;
                 }).join('');
             }
@@ -883,22 +1063,35 @@
             } else {
                 chartsHtml = `
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">지원 국가 (국적별) 전체 분포</h3>
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                            <span><i class="fa-solid fa-globe text-indigo-500 mr-1.5"></i>국적별 분포</span>
+                            <span class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">총 ${natSet.size}개국</span>
+                        </h3>
                         <div class="overflow-x-auto w-full"><div class="relative h-64 w-full" id="nat-chart-wrapper"><canvas id="chartNationality"></canvas></div></div>
                     </div>
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">선정자 성별 분포</h3>
-                        <div class="relative h-64 w-full flex justify-center"><canvas id="chartGender"></canvas></div>
-                    </div>
-                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2">그룹별 성별 현황</h3>
-                        <div class="relative h-64 w-full"><canvas id="chartGroupGender"></canvas></div>
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
+                            <span><i class="fa-solid fa-cake-candles text-amber-500 mr-1.5"></i>나이(연령대) 분포</span>
+                            <span class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full">${avgAgeText}</span>
+                        </h3>
+                        <div class="relative h-64 w-full"><canvas id="chartAge"></canvas></div>
                     </div>
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
                         <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center">
-                            <span>소속별 인원 전체 분포</span> <span class="text-[10px] font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">스크롤</span>
+                            <span><i class="fa-solid fa-building-user text-teal-500 mr-1.5"></i>소속 대분류 분포</span>
+                            <span class="text-[10px] font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">회사원·대학생 등 자동분류</span>
                         </h3>
-                        <div class="overflow-y-auto w-full h-64 pr-2">${schoolHtml}</div>
+                        <div class="overflow-y-auto w-full h-64 pr-1">${affiliationCatHtml}</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b pb-2 flex justify-between items-center flex-wrap gap-2">
+                            <span><i class="fa-solid fa-venus-mars text-pink-500 mr-1.5"></i>성별 분포</span>
+                            <div class="flex items-center gap-1.5 text-[11px] font-bold">
+                                <span class="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">남 ${mCount}명 (${mPct}%)</span>
+                                <span class="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">여 ${fCount}명 (${fPct}%)</span>
+                            </div>
+                        </h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="chartGender"></canvas></div>
                     </div>`;
             }
 
@@ -943,51 +1136,59 @@
                 if(selected.length === 0) return;
 
                 Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
-                const colors = { m: '#3B82F6', f: '#EC4899', gA: '#EF4444', gB: '#F59E0B', gC: '#10B981', nat: '#6366F1' };
+                const colors = { m: '#3B82F6', f: '#EC4899', etc: '#9CA3AF', nat: '#6366F1', age: '#F59E0B' };
 
-                const isMale = (g) => isMaleGender(g);
-                const isFemale = (g) => isFemaleGender(g);
-
+                // 1. 국적별 분포 차트
                 if (document.getElementById('chartNationality')) {
-                    const natMap = {}; selected.forEach(a => { const n = (a.nationality || '미기재').trim(); natMap[n] = (natMap[n]||0) + 1; });
-                    const sortedNat = Object.entries(natMap).sort((a,b)=>b[1]-a[1]);
-                    
-                    const wrapper = document.getElementById('nat-chart-wrapper');
-                    if(wrapper) wrapper.style.minWidth = Math.max(100, sortedNat.length * 40) + 'px';
+                    const natMap = {};
+                    selected.forEach(a => { const n = (a.nationality || '미기재').trim(); natMap[n] = (natMap[n] || 0) + 1; });
+                    const sortedNat = Object.entries(natMap).sort((a, b) => b[1] - a[1]);
 
-                    chartInstances.nationality = new Chart(document.getElementById('chartNationality'), { 
-                        type: 'bar', 
-                        data: { labels: sortedNat.map(x=>x[0]), datasets: [{ label: '인원수', data: sortedNat.map(x=>x[1]), backgroundColor: colors.nat, borderRadius: 4 }] }, 
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend:{display:false} } } 
+                    const wrapper = document.getElementById('nat-chart-wrapper');
+                    if (wrapper) wrapper.style.minWidth = Math.max(100, sortedNat.length * 42) + 'px';
+
+                    chartInstances.nationality = new Chart(document.getElementById('chartNationality'), {
+                        type: 'bar',
+                        data: { labels: sortedNat.map(x => x[0]), datasets: [{ label: '인원수', data: sortedNat.map(x => x[1]), backgroundColor: colors.nat, borderRadius: 6 }] },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
                     });
                 }
+
+                // 2. 나이(연령대) 분포 차트
+                if (document.getElementById('chartAge')) {
+                    const ageBuckets = { '10대': 0, '20~24세': 0, '25~29세': 0, '30~34세': 0, '35~39세': 0, '40세 이상': 0, '미기재': 0 };
+                    selected.forEach(a => {
+                        const grp = getAgeGroup(parseAgeFromDob(a.dob));
+                        ageBuckets[grp] = (ageBuckets[grp] || 0) + 1;
+                    });
+                    const ageLabels = ['10대', '20~24세', '25~29세', '30~34세', '35~39세', '40세 이상'];
+                    if (ageBuckets['미기재'] > 0) ageLabels.push('미기재');
+
+                    chartInstances.age = new Chart(document.getElementById('chartAge'), {
+                        type: 'bar',
+                        data: {
+                            labels: ageLabels,
+                            datasets: [{ label: '인원수', data: ageLabels.map(l => ageBuckets[l]), backgroundColor: colors.age, borderRadius: 6 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+                    });
+                }
+
+                // 3. 성별 분포 차트
                 if (document.getElementById('chartGender')) {
-                    const mCount = selected.filter(a => isMale(a.gender)).length;
-                    const fCount = selected.filter(a => isFemale(a.gender)).length;
-                    chartInstances.gender = new Chart(document.getElementById('chartGender'), { 
-                        type: 'doughnut', 
-                        data: { labels: ['남성', '여성'], datasets: [{ data: [mCount, fCount], backgroundColor: [colors.m, colors.f] }] }, 
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } 
-                    });
-                }
-                if (document.getElementById('chartGroupGender')) {
-                    const grpStats = { A: {m:0,f:0}, B: {m:0,f:0}, C: {m:0,f:0} };
-                    selected.forEach(a => { 
-                        if(a.group && grpStats[a.group]) { 
-                            if(isMale(a.gender)) grpStats[a.group].m++; 
-                            else if(isFemale(a.gender)) grpStats[a.group].f++; 
-                        } 
-                    });
-                    chartInstances.groupGender = new Chart(document.getElementById('chartGroupGender'), { 
-                        type: 'bar', 
-                        data: { 
-                            labels: ['A그룹 (1~2조)', 'B그룹 (3~4조)', 'C그룹 (5~6조)'], 
-                            datasets: [ 
-                                { label: '남성', data: [grpStats.A.m, grpStats.B.m, grpStats.C.m], backgroundColor: colors.m }, 
-                                { label: '여성', data: [grpStats.A.f, grpStats.B.f, grpStats.C.f], backgroundColor: colors.f } 
-                            ] 
-                        }, 
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } } } 
+                    const mCount = selected.filter(a => isMaleGender(a.gender)).length;
+                    const fCount = selected.filter(a => isFemaleGender(a.gender)).length;
+                    const etcCount = selected.length - mCount - fCount;
+
+                    const gLabels = ['남성', '여성'];
+                    const gData = [mCount, fCount];
+                    const gColors = [colors.m, colors.f];
+                    if (etcCount > 0) { gLabels.push('기타/미기재'); gData.push(etcCount); gColors.push(colors.etc); }
+
+                    chartInstances.gender = new Chart(document.getElementById('chartGender'), {
+                        type: 'doughnut',
+                        data: { labels: gLabels, datasets: [{ data: gData, backgroundColor: gColors, borderWidth: 2, borderColor: '#ffffff' }] },
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'bottom' } } }
                     });
                 }
             } catch(e) {}
