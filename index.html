@@ -863,7 +863,14 @@
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i].c;
                     if (!row || !row[0] || row[0].v === null) continue;
-                    const groupRaw = getVal(row, 0).toUpperCase(); const loc = getVal(row, 1);
+                    const groupRaw = getVal(row, 0).toUpperCase();
+                    // B열 및 추가 열(식당 위치 URL 등)에 입력된 내용을 모두 포함
+                    const locParts = [];
+                    for (let c = 1; c < row.length; c++) {
+                        const cellVal = getCellDisplayVal(row, c);
+                        if (cellVal) locParts.push(cellVal);
+                    }
+                    const loc = locParts.join('\n');
                     if (groupRaw.includes('A') && loc) state.locations['A'] = loc;
                     else if (groupRaw.includes('B') && loc) state.locations['B'] = loc;
                     else if (groupRaw.includes('C') && loc) state.locations['C'] = loc;
@@ -1702,7 +1709,7 @@
                 contentHtml = `<div class="p-4 md:p-5 bg-gray-50 rounded-b-2xl border-t border-gray-200 w-full overflow-auto max-h-[calc(100vh-320px)]"><div class="mb-4 text-sm text-gray-600 bg-white p-3 border rounded-lg flex items-center gap-2 print-hide"><i class="fa-solid fa-circle-info text-blue-500"></i>참가자 이름을 클릭하면 상세 정보를 볼 수 있습니다. 좌측 체크 버튼으로 출결을 관리하세요.</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${roomCards || '<div class="col-span-full text-center text-gray-400 p-8">인원이 없습니다.</div>'}</div></div>`;
             }
 
-            const linkedLocationText = autoLinkPhoneNumbers(state.locations[group] || '미정');
+            const linkedLocationText = formatLocationText(state.locations[group] || '미정');
             const mgrList = managers.map(m => `<a href="tel:${m.phone}" class="inline-flex items-center gap-1 bg-white/50 border ${theme.btnBorder} ${theme.btnText} px-2.5 py-1 rounded text-xs font-bold mr-2 mb-1 ${theme.btnHover} transition-colors shadow-sm print-hide" title="${m.phone} 연결"><span>${m.role} ${m.name}</span><i class="fa-solid fa-phone ml-0.5 text-[10px] opacity-70"></i></a><span class="hidden print-inline text-sm mr-2 font-bold text-gray-800">${m.role} ${m.name}</span>`).join('');
             
             const attendedCount = members.filter(m => m.isAttended).length;
@@ -1719,11 +1726,11 @@
                         <button onclick="window.print()" class="bg-white border ${theme.btnBorder} ${theme.textTitle} px-4 py-2 rounded-lg text-sm shadow-sm ${theme.btnHover} flex items-center gap-2 whitespace-nowrap transition-colors print-hide"><i class="fa-solid fa-print"></i> 명단 인쇄</button>
                     </div>
                     
-                    <div class="mt-4 bg-white/60 p-4 rounded-xl border ${theme.btnBorder} flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full ${theme.bg} flex items-center justify-center ${theme.textSub} flex-shrink-0"><i class="fa-solid fa-location-dot"></i></div>
-                        <div class="flex-1">
+                    <div class="mt-4 bg-white/60 p-4 rounded-xl border ${theme.btnBorder} flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full ${theme.bg} flex items-center justify-center ${theme.textSub} flex-shrink-0 mt-0.5"><i class="fa-solid fa-location-dot"></i></div>
+                        <div class="flex-1 min-w-0">
                             <span class="text-xs font-bold ${theme.textSub} uppercase block mb-1">방문 예정 탐방지</span>
-                            <span class="text-sm font-medium text-gray-800 whitespace-pre-line leading-snug block">${linkedLocationText}</span>
+                            <span class="text-sm font-medium text-gray-800 whitespace-pre-line leading-relaxed block break-words">${linkedLocationText}</span>
                         </div>
                     </div>
                     
@@ -1788,16 +1795,61 @@
             });
         }
 
-        function toggleSelection(id) {
-            requireAuthForAction(() => {
-                const app = state.applicants.find(a=>a.id===id);
-                if(!app) return;
-                const cnt = state.applicants.filter(a=>a.isSelected).length;
-                if(!app.isSelected && cnt >= TARGET_COUNT) return showToast('최대 선발 인원 초과', 'error');
-                app.isSelected = !app.isSelected;
-                if(!app.isSelected) { app.group = null; app.room = null; app.team = null; app.isAttended = false; }
-                saveToLocalStorage(); render(); updateSheetData(app);
-            });
+        // 탐방지 텍스트 내 URL을 클릭 가능한 위치(지도 핀) 버튼으로 변환하고 전화번호도 안전하게 링크 처리
+        function formatLocationText(text) {
+            if (!text) return '';
+            const urlRegex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
+            let result = '';
+            let lastIndex = 0;
+            let match;
+
+            while ((match = urlRegex.exec(text)) !== null) {
+                const beforeText = text.slice(lastIndex, match.index);
+                result += autoLinkPhoneNumbers(escapeHtml(beforeText));
+
+                // URL 끝에 붙은 닫는 괄호나 문장부호는 링크에서 제외
+                let rawUrl = match[0];
+                let trailing = '';
+                while (/[),.;:\]>'"]$/.test(rawUrl)) {
+                    trailing = rawUrl.slice(-1) + trailing;
+                    rawUrl = rawUrl.slice(0, -1);
+                }
+
+                const href = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
+                const lowerUrl = href.toLowerCase();
+
+                // 지도 서비스별 맞춤 위치 아이콘·라벨 표시
+                let label = '위치 보기';
+                let badgeStyle = 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200';
+                let iconColor = 'text-red-500';
+
+                if (lowerUrl.includes('naver.me') || lowerUrl.includes('map.naver') || lowerUrl.includes('place.naver')) {
+                    label = '네이버 지도';
+                    badgeStyle = 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200';
+                    iconColor = 'text-emerald-600';
+                } else if (lowerUrl.includes('kko.to') || lowerUrl.includes('kakao.com')) {
+                    label = '카카오맵';
+                    badgeStyle = 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200';
+                    iconColor = 'text-amber-600';
+                } else if (lowerUrl.includes('google.com/maps') || lowerUrl.includes('goo.gl/maps') || lowerUrl.includes('maps.app.goo.gl') || lowerUrl.includes('maps.google')) {
+                    label = '구글 지도';
+                    badgeStyle = 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200';
+                    iconColor = 'text-red-500';
+                }
+
+                const safeHref = escapeHtml(href);
+                result += `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="${safeHref}" class="inline-flex items-center gap-1 ${badgeStyle} border px-2 py-0.5 rounded-full text-xs font-bold align-middle mx-0.5 my-0.5 transition-colors shadow-sm"><i class="fa-solid fa-location-dot ${iconColor} text-[11px]"></i><span>${label}</span><i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-65"></i></a>`;
+
+                if (trailing) {
+                    result += escapeHtml(trailing);
+                }
+                lastIndex = urlRegex.lastIndex;
+            }
+
+            if (lastIndex < text.length) {
+                result += autoLinkPhoneNumbers(escapeHtml(text.slice(lastIndex)));
+            }
+            return result;
         }
 
         function toggleAttendance(id) {
