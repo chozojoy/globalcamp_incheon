@@ -238,8 +238,8 @@
                         <input type="text" id="config-app-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="0">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">관리자 시트 GID</label>
-                        <input type="text" id="config-admin-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="85491845">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">관리자 시트명 또는 GID</label>
+                        <input type="text" id="config-admin-gid" class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none text-xs" placeholder="시트2">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">탐방지 시트 GID</label>
@@ -353,7 +353,7 @@
         // =========================================================================
         const DEFAULT_SPREADSHEET_LINK = "https://docs.google.com/spreadsheets/d/1izQH-HdXBstMBLknfEZlpPaz1mxKHNw-d8r7jHPNUzg/edit?usp=sharing";
         const DEFAULT_APP_SHEET_GID = "0";              // 시트1: 지원자 명단 GID
-        const DEFAULT_ADMIN_SHEET_GID = "85491845";     // 시트2: 관리자 명단 GID
+        const DEFAULT_ADMIN_SHEET_GID = "시트2";         // 시트2: 관리자 명단 (시트명 또는 GID 지원)
         const DEFAULT_LOC_SHEET_GID = "2135230578";     // 시트3: 그룹별 탐방지 GID
         const DEFAULT_PROG_SHEET_GID = "388345636";     // 시트4: 행사 프로그램(PDF 링크) GID
         const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbydGtmOUt3yH_FsUBdHPHFHCcLEL09kACClYqxesThIa9wn6wYfl5c7tRSzozEX6EBD/exec";
@@ -384,14 +384,19 @@
 
         let chartInstances = {};
         let syncInterval = null;
+        let adminFallbackTried = false;
         let state = {
             currentView: 'dashboard', managerTab: 'list', applicantFilter: 'all',
             applicants: [],
             locations: { ...DEFAULT_INCHEON_LOCATIONS },
             programLink: '',
-            admins: [], managers: { 'A': [], 'B': [], 'C': [], '총괄': [] },
+            admins: [],
+            adminHeaders: [],
+            adminColMap: { group: 0, role: 1, name: 2, phone: 3 },
+            adminSearchQuery: '',
+            managers: { 'A': [], 'B': [], 'C': [], '총괄': [] },
             searchQuery: '', isAuthenticated: false, currentUser: null, dataLoaded: false,
-            sortConfig: { applicants: { key: 'id', direction: 'asc' }, admins: { key: 'name', direction: 'asc' } }
+            sortConfig: { applicants: { key: 'id', direction: 'asc' }, admins: { key: null, direction: 'asc' } }
         };
 
         const ACTION_PW = "1006";
@@ -441,7 +446,7 @@
             if (!rawUrl) return showToast('스프레드시트 링크 또는 ID를 입력해주세요.', 'error');
             SHEET_ID = extractSheetId(rawUrl);
             APP_SHEET_GID = document.getElementById('config-app-gid').value.trim() || "0";
-            ADMIN_SHEET_GID = document.getElementById('config-admin-gid').value.trim() || "0";
+            ADMIN_SHEET_GID = document.getElementById('config-admin-gid').value.trim() || "시트2";
             LOC_SHEET_GID = document.getElementById('config-loc-gid').value.trim() || "0";
             PROG_SHEET_GID = document.getElementById('config-prog-gid').value.trim() || "0";
             GAS_WEB_APP_URL = document.getElementById('config-gas-url').value.trim();
@@ -499,14 +504,29 @@
             else if(!isSilent) document.getElementById('login-loading').classList.remove('hidden');
 
             const cacheBuster = new Date().getTime();
+            adminFallbackTried = false;
             ['syncAppScript', 'syncAdminScript', 'syncLocScript', 'syncProgScript'].forEach(id => {
                 const old = document.getElementById(id); if (old) old.remove();
             });
 
             const s1 = document.createElement('script'); s1.id = 'syncAppScript'; s1.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleAppSheet&gid=${APP_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s1);
-            const s2 = document.createElement('script'); s2.id = 'syncAdminScript'; s2.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleAdminSheet&gid=${ADMIN_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s2);
+            loadAdminSheetScript(ADMIN_SHEET_GID, cacheBuster);
             const s3 = document.createElement('script'); s3.id = 'syncLocScript'; s3.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleLocSheet&gid=${LOC_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s3);
             const s4 = document.createElement('script'); s4.id = 'syncProgScript'; s4.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleProgSheet&gid=${PROG_SHEET_GID}&_t=${cacheBuster}`; document.body.appendChild(s4);
+        }
+
+        // 시트명('시트2') 또는 숫자 GID를 모두 지원하며 headers=0으로 모든 행을 누락 없이 로드
+        function loadAdminSheetScript(target, cacheBuster) {
+            const old = document.getElementById('syncAdminScript');
+            if (old) old.remove();
+            const cleanTarget = String(target || '시트2').trim();
+            const sheetParam = /^\d+$/.test(cleanTarget)
+                ? `gid=${cleanTarget}`
+                : `sheet=${encodeURIComponent(cleanTarget)}`;
+            const s2 = document.createElement('script');
+            s2.id = 'syncAdminScript';
+            s2.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:handleAdminSheet&${sheetParam}&headers=0&_t=${cacheBuster || new Date().getTime()}`;
+            document.body.appendChild(s2);
         }
 
         const getVal = (row, idx) => {
@@ -517,6 +537,36 @@
             if (row[idx].v !== null && row[idx].v !== undefined) return String(row[idx].v).trim();
             return '';
         };
+
+        // 시트에 표시된 원본 서식(앞자리 0, 하이픈, 날짜 등)을 우선 보존하여 읽는 헬퍼
+        const getCellDisplayVal = (row, idx) => {
+            if (!row || !row[idx]) return '';
+            const cell = row[idx];
+            if (cell.f !== null && cell.f !== undefined && String(cell.f).trim() !== '') {
+                return String(cell.f).trim();
+            }
+            if (cell.v !== null && cell.v !== undefined) {
+                return String(cell.v).trim();
+            }
+            return '';
+        };
+
+        // 전화번호 숫자만 정규화 (구글 시트에서 앞자리 0이 생략된 경우 자동 복원)
+        function normalizePhoneDigits(phone) {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (digits.startsWith('82') && digits.length >= 11) digits = '0' + digits.slice(2);
+            if (digits.length === 10 && digits.startsWith('10')) digits = '0' + digits;
+            return digits;
+        }
+
+        function formatPhoneDisplay(val) {
+            const raw = String(val || '').trim();
+            if (!raw) return '';
+            if (raw.includes('-')) return raw;
+            const d = normalizePhoneDigits(raw);
+            if (d.length === 11 && d.startsWith('01')) return `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
+            return raw;
+        }
 
         // 타임스탬프 전용 파서: [월-일-연도 시간:분:초] (MM-DD-YYYY HH:mm:ss) 형식으로 변환
         const getTimestampVal = (row, idx) => {
@@ -644,33 +694,167 @@
 
         window.handleAdminSheet = function(response) {
             try {
-                const rows = response.table.rows;
+                // 시트명 또는 GID 조회 오류 시 1회 자동 대체 시도
+                if (!response || response.status === 'error' || !response.table) {
+                    if (!adminFallbackTried) {
+                        adminFallbackTried = true;
+                        const fallbackTarget = /^\d+$/.test(String(ADMIN_SHEET_GID).trim()) ? '시트2' : '85491845';
+                        loadAdminSheetScript(fallbackTarget);
+                    }
+                    return;
+                }
+
+                const rawRows = response.table.rows || [];
+                const colDefs = response.table.cols || [];
+                const maxCols = Math.max(
+                    colDefs.length,
+                    ...rawRows.map(r => (r && r.c ? r.c.length : 0))
+                );
+
+                // 모든 행을 표시 텍스트 배열로 변환하고 완전히 빈 행 제거
+                let grid = [];
+                for (let i = 0; i < rawRows.length; i++) {
+                    const rowC = rawRows[i] && rawRows[i].c ? rawRows[i].c : [];
+                    const vals = [];
+                    let hasAny = false;
+                    for (let j = 0; j < maxCols; j++) {
+                        const v = getCellDisplayVal(rowC, j);
+                        vals.push(v);
+                        if (v !== '') hasAny = true;
+                    }
+                    if (hasAny) grid.push(vals);
+                }
+
+                // 만약 잘못된 GID로 인해 지원자 시트(시트1)가 로드된 경우 자동으로 '시트2'로 재시도
+                if (grid.length > 0 && grid[0][0] === '지원번호' && !adminFallbackTried) {
+                    adminFallbackTried = true;
+                    loadAdminSheetScript('시트2');
+                    return;
+                }
+
+                if (grid.length === 0) return;
+
+                // 데이터가 전혀 없는 완전히 빈 열 제거 (중간/끝 빈 열 정리)
+                const activeColIndices = [];
+                for (let c = 0; c < maxCols; c++) {
+                    const hasDataInCol = grid.some(r => r[c] !== '');
+                    if (hasDataInCol) activeColIndices.push(c);
+                }
+                grid = grid.map(r => activeColIndices.map(c => r[c]));
+
+                // 헤더 행 자동 판별 (상단에 제목 배너 행이 1줄 있을 경우도 자동 건너뜀)
+                const headerRegex = /(그룹|조|직책|직급|구분|역할|소속|부서|이름|성명|관리자|담당|연락처|전화|휴대폰|이메일|비고|메모|번호|숙소|객실|차량|name|phone|tel|group|role|email)/i;
+                const phoneLikeRegex = /01[016789][-\s]?\d{3,4}[-\s]?\d{4}/;
+                let headerRowIdx = -1;
+
+                for (let i = 0; i < Math.min(grid.length, 4); i++) {
+                    const nonEmpty = grid[i].filter(v => v !== '');
+                    const matchCount = nonEmpty.filter(v => headerRegex.test(v)).length;
+                    const hasPhone = nonEmpty.some(v => phoneLikeRegex.test(v));
+                    if (matchCount >= 2 && !hasPhone) {
+                        headerRowIdx = i;
+                        break;
+                    }
+                }
+
+                let headers = [];
+                let dataStartIdx = 0;
+                if (headerRowIdx >= 0) {
+                    headers = grid[headerRowIdx].map((h, idx) => h || `항목 ${idx + 1}`);
+                    dataStartIdx = headerRowIdx + 1;
+                } else {
+                    const defaultNames = ['담당 그룹', '직책/구분', '이름', '연락처'];
+                    headers = grid[0].map((_, idx) => defaultNames[idx] || `항목 ${idx + 1}`);
+                    dataStartIdx = 0;
+                }
+
+                // 핵심 컬럼(그룹, 직책, 이름, 연락처) 인덱스 자동 매핑
+                const findCol = (regex, exclude = []) => {
+                    for (let i = 0; i < headers.length; i++) {
+                        if (exclude.includes(i)) continue;
+                        if (regex.test(headers[i])) return i;
+                    }
+                    return -1;
+                };
+
+                let nameIdx = findCol(/(이름|성명|관리자명|성함|name)/i);
+                let phoneIdx = findCol(/(연락처|전화|휴대폰|핸드폰|h\.?p|phone|tel|mobile)/i, [nameIdx]);
+                let groupIdx = findCol(/(담당\s*그룹|그룹|담당\s*조|^조$|배정|group|team)/i, [nameIdx, phoneIdx]);
+                let roleIdx = findCol(/(직책|직급|역할|구분|담당\s*업무|업무|소속|부서|role|position)/i, [nameIdx, phoneIdx, groupIdx]);
+
+                // 헤더 이름으로 연락처 열을 못 찾았을 경우 데이터 패턴으로 자동 탐색
+                if (phoneIdx === -1) {
+                    for (let c = 0; c < headers.length; c++) {
+                        if (c === nameIdx) continue;
+                        const hits = grid.slice(dataStartIdx).filter(r => {
+                            const d = normalizePhoneDigits(r[c]);
+                            return d.length >= 9 && d.length <= 11 && d.startsWith('0');
+                        }).length;
+                        if (hits > 0) { phoneIdx = c; break; }
+                    }
+                }
+
+                if (groupIdx === -1 && headers.length >= 1 && ![nameIdx, phoneIdx, roleIdx].includes(0)) groupIdx = 0;
+                if (roleIdx === -1 && headers.length >= 2 && ![nameIdx, phoneIdx, groupIdx].includes(1)) roleIdx = 1;
+                if (nameIdx === -1) {
+                    const fallbackOrder = [2, 1, 0];
+                    nameIdx = fallbackOrder.find(i => i < headers.length && i !== phoneIdx) ?? 0;
+                }
+                if (phoneIdx === -1 && headers.length >= 4) phoneIdx = 3;
+
                 let newAdmins = [];
                 let newManagers = { 'A': [], 'B': [], 'C': [], '총괄': [] };
+                let lastGroup = '';
 
-                for (let i = 0; i < rows.length; i++) {
-                    const row = rows[i].c;
-                    if (!row || !row[2] || row[2].v === null) continue;
-                    
-                    const group = getVal(row, 0); const role = getVal(row, 1);
-                    const name = getVal(row, 2); const phone = getVal(row, 3);
-                    if (name === '관리자명' || name === '이름' || name === '') continue;
+                for (let i = dataStartIdx; i < grid.length; i++) {
+                    const rowVals = [...grid[i]];
+                    // 중간에 반복된 헤더 행이 있으면 건너뜀
+                    const nonEmpty = rowVals.filter(v => v !== '');
+                    if (nonEmpty.length === 0) continue;
+                    if (nameIdx >= 0 && ['관리자명', '이름', '성명'].includes(rowVals[nameIdx])) continue;
 
-                    const adminObj = { group: group || '미정', role: role || '관리자', name, phone };
+                    // 셀 병합으로 그룹 열이 비어있는 경우 직전 행의 그룹값을 이어받음
+                    let rawGroup = groupIdx >= 0 ? rowVals[groupIdx] : '';
+                    if (rawGroup) {
+                        lastGroup = rawGroup;
+                    } else if (groupIdx >= 0 && lastGroup && (nonEmpty.length >= 2 || (nameIdx >= 0 && rowVals[nameIdx]))) {
+                        rawGroup = lastGroup;
+                        rowVals[groupIdx] = lastGroup;
+                    }
+
+                    const group = rawGroup || '미정';
+                    const role = (roleIdx >= 0 ? rowVals[roleIdx] : '') || '관리자';
+                    const name = (nameIdx >= 0 ? rowVals[nameIdx] : '') || nonEmpty[0] || '';
+                    const rawPhone = phoneIdx >= 0 ? rowVals[phoneIdx] : '';
+                    const phone = formatPhoneDisplay(rawPhone);
+                    if (phoneIdx >= 0 && phone) rowVals[phoneIdx] = phone;
+
+                    const adminObj = {
+                        group,
+                        role,
+                        name,
+                        phone,
+                        cells: rowVals
+                    };
                     newAdmins.push(adminObj);
 
+                    // 그룹 매핑 (영문 단어 STAFF/ADMIN 등에 포함된 A/B/C 오인식 방지)
                     const upGroup = group.toUpperCase();
-                    if(upGroup.includes('A')) newManagers['A'].push(adminObj);
-                    else if(upGroup.includes('B')) newManagers['B'].push(adminObj);
-                    else if(upGroup.includes('C')) newManagers['C'].push(adminObj);
+                    if (/(^|[^A-Z])A($|[^A-Z])|A\s*그룹|A\s*조|1~2조|1조|2조/.test(upGroup)) newManagers['A'].push(adminObj);
+                    else if (/(^|[^A-Z])B($|[^A-Z])|B\s*그룹|B\s*조|3~4조|3조|4조/.test(upGroup)) newManagers['B'].push(adminObj);
+                    else if (/(^|[^A-Z])C($|[^A-Z])|C\s*그룹|C\s*조|5~6조|5조|6조/.test(upGroup)) newManagers['C'].push(adminObj);
                     else newManagers['총괄'].push(adminObj);
                 }
-                
+
+                state.adminHeaders = headers;
+                state.adminColMap = { group: groupIdx, role: roleIdx, name: nameIdx, phone: phoneIdx };
                 state.admins = newAdmins;
                 state.managers = newManagers;
-                saveToLocalStorage(); 
+                saveToLocalStorage();
                 if (state.isAuthenticated && (state.currentView === 'admins' || state.currentView.startsWith('manager-'))) render();
-            } catch (e) {}
+            } catch (e) {
+                console.error("Admin Sheet Error", e);
+            }
         };
 
         window.handleLocSheet = function(response) {
@@ -714,8 +898,15 @@
             try {
                 const phoneInput = document.getElementById('login-phone').value.trim();
                 if (!phoneInput) return showToast('연락처를 입력해주세요.', 'error');
-                const sanitizedInput = phoneInput.replace(/-/g, '');
-                const admin = (state.admins || []).find(a => (a.phone || '') === phoneInput || (a.phone || '').replace(/-/g, '') === sanitizedInput);
+                const normalizedInput = normalizePhoneDigits(phoneInput);
+                const admin = (state.admins || []).find(a => {
+                    if ((a.phone || '') === phoneInput) return true;
+                    if (normalizedInput && normalizePhoneDigits(a.phone) === normalizedInput) return true;
+                    if (Array.isArray(a.cells) && normalizedInput) {
+                        return a.cells.some(c => normalizePhoneDigits(c) === normalizedInput);
+                    }
+                    return false;
+                });
                 
                 if (admin) {
                     state.isAuthenticated = true; state.currentUser = admin; saveToLocalStorage();
@@ -732,8 +923,15 @@
         function saveToLocalStorage() {
             try {
                 localStorage.setItem('kBrandIncheonDashboardState_v2', JSON.stringify({
-                    applicants: state.applicants, locations: state.locations, programLink: state.programLink,
-                    isAuthenticated: state.isAuthenticated, currentUser: state.currentUser
+                    applicants: state.applicants,
+                    admins: state.admins,
+                    adminHeaders: state.adminHeaders,
+                    adminColMap: state.adminColMap,
+                    managers: state.managers,
+                    locations: state.locations,
+                    programLink: state.programLink,
+                    isAuthenticated: state.isAuthenticated,
+                    currentUser: state.currentUser
                 }));
             } catch (e) {}
         }
@@ -744,6 +942,10 @@
                 if (saved) {
                     const data = JSON.parse(saved);
                     state.applicants = Array.isArray(data.applicants) ? data.applicants : [];
+                    state.admins = Array.isArray(data.admins) ? data.admins : [];
+                    state.adminHeaders = Array.isArray(data.adminHeaders) ? data.adminHeaders : [];
+                    if (data.adminColMap) state.adminColMap = data.adminColMap;
+                    if (data.managers) state.managers = data.managers;
                     state.locations = data.locations || { ...DEFAULT_INCHEON_LOCATIONS };
                     state.programLink = data.programLink || '';
                     state.isAuthenticated = data.isAuthenticated || false; state.currentUser = data.currentUser || null;
@@ -778,8 +980,20 @@
             state.sortConfig[dataset] = { key, direction };
             const targetArray = dataset === 'applicants' ? state.applicants : state.admins;
             targetArray.sort((a, b) => {
-                let valA = a[key] !== undefined && a[key] !== null ? a[key] : ''; 
-                let valB = b[key] !== undefined && b[key] !== null ? b[key] : '';
+                let valA, valB;
+                if (dataset === 'admins' && String(key).startsWith('col_')) {
+                    const colIdx = parseInt(String(key).replace('col_', ''), 10);
+                    valA = (a.cells && a.cells[colIdx] !== undefined) ? a.cells[colIdx] : '';
+                    valB = (b.cells && b.cells[colIdx] !== undefined) ? b.cells[colIdx] : '';
+                    const numA = Number(valA);
+                    const numB = Number(valB);
+                    if (valA !== '' && valB !== '' && !isNaN(numA) && !isNaN(numB)) {
+                        return direction === 'asc' ? numA - numB : numB - numA;
+                    }
+                } else {
+                    valA = a[key] !== undefined && a[key] !== null ? a[key] : '';
+                    valB = b[key] !== undefined && b[key] !== null ? b[key] : '';
+                }
                 
                 if (key === 'id') {
                     const numA = parseInt(valA, 10);
@@ -1195,24 +1409,113 @@
         }
 
         function renderAdminList() {
-            const rows = (state.admins || []).map(a => `<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-4 text-sm font-medium"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border border-gray-200">${a.group}</span></td><td class="p-4 text-sm text-gray-600">${a.role}</td><td class="p-4 text-sm font-bold text-gray-900">${a.name}</td><td class="p-4 text-sm text-teal-600"><a href="tel:${a.phone}"><i class="fa-solid fa-phone text-xs mr-1"></i>${a.phone}</a></td></tr>`).join('');
-            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6"><div class="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center"><div><h3 class="font-bold text-gray-800">전체 관리자 명단</h3></div><span class="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full border border-teal-200">총 ${(state.admins || []).length}명</span></div><div class="overflow-x-auto w-full"><table class="w-full text-left min-w-[500px]"><thead class="bg-gray-50 sticky top-0 border-b border-gray-200 shadow-sm z-10"><tr><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'group')">담당 그룹 ${getSortIcon('admins', 'group')}</th><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'role')">직책/구분 ${getSortIcon('admins', 'role')}</th><th class="p-4 text-xs font-bold text-gray-500 sortable-header" onclick="sortData('admins', 'name')">이름 ${getSortIcon('admins', 'name')}</th><th class="p-4 text-xs font-bold text-gray-500">연락처</th></tr></thead><tbody>${rows || `<tr><td colspan="4" class="p-8 text-center text-gray-400">명단이 없습니다.</td></tr>`}</tbody></table></div></div>`;
+            const headers = (state.adminHeaders && state.adminHeaders.length > 0)
+                ? state.adminHeaders
+                : ['담당 그룹', '직책/구분', '이름', '연락처'];
+            const colMap = state.adminColMap || { group: 0, role: 1, name: 2, phone: 3 };
+            const query = (state.adminSearchQuery || '').trim().toLowerCase();
+
+            const filteredAdmins = (state.admins || []).filter(a => {
+                if (!query) return true;
+                const cells = Array.isArray(a.cells) ? a.cells : [a.group, a.role, a.name, a.phone];
+                return cells.some(c => String(c || '').toLowerCase().includes(query));
+            });
+
+            const formatAdminCell = (val, colIdx) => {
+                const text = String(val || '').trim();
+                if (!text) return '<span class="text-gray-300">-</span>';
+
+                // 담당 그룹 뱃지 스타일
+                if (colIdx === colMap.group) {
+                    const up = text.toUpperCase();
+                    let badgeCls = 'bg-gray-100 text-gray-700 border-gray-200';
+                    if (/(^|[^A-Z])A($|[^A-Z])|A\s*그룹|A\s*조|1~2조|1조|2조/.test(up)) badgeCls = 'bg-red-50 text-red-700 border-red-200';
+                    else if (/(^|[^A-Z])B($|[^A-Z])|B\s*그룹|B\s*조|3~4조|3조|4조/.test(up)) badgeCls = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                    else if (/(^|[^A-Z])C($|[^A-Z])|C\s*그룹|C\s*조|5~6조|5조|6조/.test(up)) badgeCls = 'bg-green-50 text-green-700 border-green-200';
+                    else if (text.includes('총괄')) badgeCls = 'bg-teal-50 text-teal-700 border-teal-200';
+                    return `<span class="${badgeCls} px-2.5 py-1 rounded-md text-xs font-bold border whitespace-nowrap inline-block">${escapeHtml(text)}</span>`;
+                }
+
+                // 이름 열 강조
+                if (colIdx === colMap.name) {
+                    return `<span class="font-bold text-gray-900 whitespace-nowrap">${escapeHtml(text)}</span>`;
+                }
+
+                // 연락처 열 또는 전화번호 형식 자동 링크
+                const digits = normalizePhoneDigits(text);
+                const isPhoneVal = colIdx === colMap.phone || (/^[\d\-\s\+\(\)]+$/.test(text) && digits.length >= 9 && digits.length <= 11 && digits.startsWith('0'));
+                if (isPhoneVal && digits.length >= 8) {
+                    const disp = formatPhoneDisplay(text);
+                    return `<a href="tel:${digits}" class="text-teal-600 hover:text-teal-800 hover:underline font-medium inline-flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-phone text-[10px]"></i>${escapeHtml(disp)}</a>`;
+                }
+
+                // 이메일 자동 링크
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+                    return `<a href="mailto:${escapeHtml(text)}" class="text-blue-600 hover:underline inline-flex items-center gap-1 whitespace-nowrap"><i class="fa-solid fa-envelope text-[10px] text-blue-400"></i>${escapeHtml(text)}</a>`;
+                }
+
+                // URL 자동 링크
+                if (/^https?:\/\/\S+$/i.test(text)) {
+                    return `<a href="${escapeHtml(text)}" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-1 whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>링크 열기</a>`;
+                }
+
+                // 일반 텍스트 (줄바꿈 및 본문 내 전화번호 링크 보존)
+                return `<span class="text-gray-700 whitespace-pre-line">${autoLinkPhoneNumbers(escapeHtml(text))}</span>`;
+            };
+
+            const theadCells = headers.map((h, idx) =>
+                `<th class="p-3.5 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('admins', 'col_${idx}')">${escapeHtml(h)} ${getSortIcon('admins', `col_${idx}`)}</th>`
+            ).join('');
+
+            const rows = filteredAdmins.map(a => {
+                const cells = Array.isArray(a.cells) ? a.cells : [a.group, a.role, a.name, a.phone];
+                const tds = headers.map((_, idx) => `<td class="p-3.5 text-sm align-middle">${formatAdminCell(cells[idx], idx)}</td>`).join('');
+                return `<tr class="border-b border-gray-100 hover:bg-teal-50/30 transition-colors">${tds}</tr>`;
+            }).join('');
+
+            return `
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                <div class="p-4 md:p-5 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h3 class="font-bold text-gray-800">전체 관리자 명단 <span class="text-xs font-normal text-gray-400 ml-1">(시트2 전체 항목 연동)</span></h3>
+                        <span class="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full border border-teal-200">총 ${filteredAdmins.length}명</span>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto print-hide">
+                        <div class="relative flex-1 sm:w-56">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input type="text" id="admin-search" value="${escapeHtml(state.adminSearchQuery || '')}" onkeyup="updateAdminSearch(this.value)" placeholder="이름, 그룹, 연락처 등 검색..." class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white">
+                        </div>
+                        <button onclick="downloadAdminCSV()" class="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors whitespace-nowrap" title="관리자 명단 엑셀 다운로드"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto w-full max-h-[calc(100vh-230px)]">
+                    <table class="w-full text-left min-w-[600px]">
+                        <thead class="bg-gray-50 sticky top-0 border-b border-gray-200 shadow-sm z-10">
+                            <tr>${theadCells}</tr>
+                        </thead>
+                        <tbody>${rows || `<tr><td colspan="${headers.length}" class="p-10 text-center text-gray-400">표시할 관리자 명단이 없습니다.</td></tr>`}</tbody>
+                    </table>
+                </div>
+            </div>`;
         }
 
         function renderApplicantsList() {
             const filterType = state.applicantFilter || 'all';
-            let filteredApps = (state.applicants || []).filter(a => { 
+            const query = (state.searchQuery || '').trim().toLowerCase();
+
+            const filteredApps = (state.applicants || []).filter(a => {
                 let matchFilter = true;
-                if (filterType === 'selected') matchFilter = a.isSelected; 
-                if (filterType === 'waiting') matchFilter = !a.isSelected; 
-                
+                if (filterType === 'selected') matchFilter = a.isSelected;
+                else if (filterType === 'waiting') matchFilter = !a.isSelected;
+
                 let matchSearch = true;
-                if (state.searchQuery) {
-                    const query = state.searchQuery.toLowerCase();
-                    matchSearch = (a.korName || "").toLowerCase().includes(query) || 
-                                  (a.engName || "").toLowerCase().includes(query) ||
-                                  (a.phone || "").includes(query) ||
-                                  (a.affiliation || "").toLowerCase().includes(query);
+                if (query) {
+                    matchSearch = (a.korName || '').toLowerCase().includes(query)
+                        || (a.engName || '').toLowerCase().includes(query)
+                        || (a.nationality || '').toLowerCase().includes(query)
+                        || (a.phone || '').toLowerCase().includes(query)
+                        || (a.affiliation || '').toLowerCase().includes(query)
+                        || (a.email || '').toLowerCase().includes(query);
                 }
                 return matchFilter && matchSearch;
             });
@@ -1222,60 +1525,73 @@
                 const isF = isFemaleGender(a.gender);
                 const genderStyle = isM ? 'text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded' : (isF ? 'text-pink-600 font-bold bg-pink-50 px-1.5 py-0.5 rounded' : 'text-gray-600 font-bold bg-gray-100 px-1.5 py-0.5 rounded');
                 const formattedId = !isNaN(a.id) && String(a.id).trim() !== '' ? String(a.id).padStart(3, '0') : a.id;
-                
-                return `<tr class="border-b border-gray-100 hover:bg-teal-50/30">
-                    <td class="p-3 text-sm text-gray-500 whitespace-nowrap">${formattedId}</td>
+                const korBadge = a.korean === '상' ? 'bg-teal-50 text-teal-700 border-teal-200' : (a.korean === '중' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-600 border-gray-200');
+
+                return `<tr class="border-b border-gray-100 hover:bg-teal-50/30 transition-colors">
+                    <td class="p-3 text-xs text-gray-500 whitespace-nowrap">${escapeHtml(formattedId)}</td>
                     <td class="p-3 whitespace-nowrap">
-                        <button onclick="showApplicantDetail('${a.id}')" class="text-left flex flex-col hover:opacity-80 transition-opacity">
-                            <span class="text-blue-600 font-bold flex items-center gap-1">${a.korName || '-'} <i class="fa-solid fa-magnifying-glass text-[10px] text-blue-400"></i></span>
-                            <span class="text-[10px] text-gray-500">${a.engName || '-'}</span>
+                        <button onclick="showApplicantDetail('${escapeHtml(a.id)}')" class="text-left flex flex-col hover:opacity-80 transition-opacity">
+                            <span class="text-teal-700 font-bold flex items-center gap-1 text-sm">${escapeHtml(a.korName || '-')} <i class="fa-solid fa-magnifying-glass text-[10px] text-teal-400"></i></span>
+                            <span class="text-[11px] text-gray-500 truncate max-w-[160px]" title="${escapeHtml(a.engName || '')}">${escapeHtml(a.engName || '-')}</span>
                         </button>
                     </td>
-                    <td class="p-3 text-sm whitespace-nowrap"><div class="text-gray-800 font-bold">${a.nationality || '-'}</div></td>
-                    <td class="p-3 text-sm whitespace-nowrap"><span class="${genderStyle} text-xs">${a.gender || '-'}</span><div class="text-[10px] text-gray-500 mt-1">${a.dob || '-'}</div></td>
-                    <td class="p-3 text-sm whitespace-nowrap"><div class="text-gray-800 truncate max-w-[150px]">${a.affiliation || '-'}</div><div class="text-[10px] text-teal-600 font-bold mt-0.5">한국어: ${a.korean || '-'}</div></td>
-                    <td class="p-3 text-sm whitespace-nowrap">
-                        <div class="text-gray-800 font-medium flex items-center gap-1.5 mb-1"><i class="fa-solid fa-phone text-[10px] text-gray-400"></i><a href="tel:${a.phone}" class="hover:text-blue-600 hover:underline">${a.phone || '-'}</a></div>
-                        <div class="text-[10px] text-gray-500 flex items-center gap-1.5 truncate max-w-[120px]" title="${a.email}"><i class="fa-solid fa-envelope text-gray-400"></i>${a.email || '-'}</div>
+                    <td class="p-3 text-sm font-bold text-gray-800 whitespace-nowrap">${escapeHtml(a.nationality || '-')}</td>
+                    <td class="p-3 text-xs whitespace-nowrap">
+                        <span class="${genderStyle}">${escapeHtml(a.gender || '-')}</span>
+                        <div class="text-[11px] text-gray-400 mt-1">${escapeHtml(a.dob || '-')}</div>
                     </td>
-                    <td class="p-3 text-sm whitespace-nowrap">${a.isSelected ? `<span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-check mr-1"></i>선정</span>` : `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">불참</span>`}</td>
-                    <td class="p-3 text-right whitespace-nowrap"><button onclick="toggleSelection('${a.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ${a.isSelected ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-teal-600 text-white hover:bg-teal-700'}">${a.isSelected ? '취소' : '선정'}</button></td>
-                </tr>`
-            });
+                    <td class="p-3 text-sm">
+                        <div class="text-gray-800 font-medium max-w-[200px] truncate" title="${escapeHtml(a.affiliation || '')}">${escapeHtml(a.affiliation || '-')}</div>
+                        <span class="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded border ${korBadge}">한국어: ${escapeHtml(a.korean || '-')}</span>
+                    </td>
+                    <td class="p-3 text-xs whitespace-nowrap">
+                        <a href="tel:${escapeHtml(a.phone || '')}" class="text-blue-600 hover:underline font-medium flex items-center gap-1"><i class="fa-solid fa-phone text-[10px] text-gray-400"></i>${escapeHtml(a.phone || '-')}</a>
+                        <div class="text-[11px] text-gray-400 truncate max-w-[160px] mt-0.5" title="${escapeHtml(a.email || '')}">${escapeHtml(a.email || '-')}</div>
+                    </td>
+                    <td class="p-3 text-xs whitespace-nowrap">
+                        ${a.isSelected ? `<span class="bg-teal-100 text-teal-700 px-2 py-1 rounded font-bold"><i class="fa-solid fa-check mr-1"></i>선정</span>` : `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded">대기</span>`}
+                    </td>
+                    <td class="p-3 text-right whitespace-nowrap">
+                        <button onclick="toggleSelection('${escapeHtml(a.id)}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${a.isSelected ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-teal-600 text-white hover:bg-teal-700'}">${a.isSelected ? '취소' : '선정'}</button>
+                    </td>
+                </tr>`;
+            }).join('');
 
-            return `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
-                <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                    <div class="flex flex-wrap items-center bg-gray-200/50 p-1 rounded-lg">
-                        <button onclick="setAppFilter('all')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'all' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">전체보기</button>
-                        <button onclick="setAppFilter('selected')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'selected' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">선정 명단</button>
-                        <button onclick="setAppFilter('waiting')" class="px-3 md:px-4 py-1.5 rounded-md text-sm font-bold ${filterType === 'waiting' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">불참 명단</button>
+            return `
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center bg-gray-200/60 p-1 rounded-lg">
+                            <button onclick="setAppFilter('all')" class="px-3 py-1.5 rounded-md text-xs md:text-sm font-bold ${filterType === 'all' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">전체 (${(state.applicants || []).length})</button>
+                            <button onclick="setAppFilter('selected')" class="px-3 py-1.5 rounded-md text-xs md:text-sm font-bold ${filterType === 'selected' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">선정 명단</button>
+                            <button onclick="setAppFilter('waiting')" class="px-3 py-1.5 rounded-md text-xs md:text-sm font-bold ${filterType === 'waiting' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'} transition-all">대기 명단</button>
+                        </div>
+                        <span class="text-xs text-gray-500 font-medium">표시: <strong>${filteredApps.length}</strong>명</span>
                     </div>
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-                        <div class="relative w-full sm:w-64">
-                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-                            <input type="text" id="applicant-search" value="${state.searchQuery}" onkeyup="updateSearch(this.value)" placeholder="이름, 소속, 연락처 검색..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-shadow">
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto print-hide">
+                        <div class="relative flex-1 sm:w-56">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input type="text" id="applicant-search" value="${escapeHtml(state.searchQuery || '')}" onkeyup="updateSearch(this.value)" placeholder="이름, 국적, 연락처, 소속 검색..." class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white">
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="sortData('applicants', 'korName')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors whitespace-nowrap"><i class="fa-solid fa-arrow-down-a-z text-teal-500"></i> 이름순</button>
-                            <button onclick="downloadCSV()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 border border-green-700 rounded-lg text-sm font-bold text-white hover:bg-green-700 shadow-sm transition-colors whitespace-nowrap print-hide" title="현재 화면 명단 엑셀 다운로드"><i class="fa-solid fa-file-csv"></i> CSV</button>
-                        </div>
+                        <button onclick="sortData('applicants', 'korName')" class="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-colors whitespace-nowrap"><i class="fa-solid fa-arrow-down-a-z text-teal-500"></i> 가나다순</button>
+                        <button onclick="downloadCSV()" class="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors whitespace-nowrap" title="현재 명단 엑셀 다운로드"><i class="fa-solid fa-file-csv"></i> CSV</button>
                     </div>
                 </div>
-                <div class="overflow-x-auto w-full max-h-[calc(100vh-250px)]">
-                    <table class="w-full text-left min-w-[900px]">
-                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10 border-b border-gray-200">
+                <div class="overflow-x-auto w-full max-h-[calc(100vh-230px)]">
+                    <table class="w-full text-left min-w-[820px]">
+                        <thead class="bg-gray-50 sticky top-0 border-b border-gray-200 shadow-sm z-10">
                             <tr>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'id')">ID ${getSortIcon('applicants', 'id')}</th>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'korName')">이름 ${getSortIcon('applicants', 'korName')}</th>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'nationality')">국적 ${getSortIcon('applicants', 'nationality')}</th>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'gender')">성별/생년 ${getSortIcon('applicants', 'gender')}</th>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'affiliation')">소속/한국어 ${getSortIcon('applicants', 'affiliation')}</th>
-                                <th class="p-3 text-xs text-gray-500 bg-gray-50">연락처/이메일</th>
-                                <th class="p-3 text-xs text-gray-500 sortable-header bg-gray-50" onclick="sortData('applicants', 'isSelected')">상태 ${getSortIcon('applicants', 'isSelected')}</th>
-                                <th class="p-3 text-xs text-gray-500 text-right bg-gray-50">관리</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'id')">ID ${getSortIcon('applicants', 'id')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'korName')">이름 (국/영문) ${getSortIcon('applicants', 'korName')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'nationality')">국적 ${getSortIcon('applicants', 'nationality')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'gender')">성별/생년월일 ${getSortIcon('applicants', 'gender')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'affiliation')">소속/한국어 ${getSortIcon('applicants', 'affiliation')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 bg-gray-50 whitespace-nowrap">연락처/이메일</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 sortable-header bg-gray-50 whitespace-nowrap" onclick="sortData('applicants', 'isSelected')">상태 ${getSortIcon('applicants', 'isSelected')}</th>
+                                <th class="p-3 text-xs font-bold text-gray-500 text-right bg-gray-50 whitespace-nowrap">관리</th>
                             </tr>
                         </thead>
-                        <tbody>${rows.length > 0 ? rows.join('') : `<tr><td colspan="8" class="p-10 text-center text-gray-400">명단이 없습니다.</td></tr>`}</tbody>
+                        <tbody>${rows || `<tr><td colspan="8" class="p-10 text-center text-gray-400">표시할 지원자 명단이 없습니다.</td></tr>`}</tbody>
                     </table>
                 </div>
             </div>`;
@@ -1616,41 +1932,90 @@
             }
         }
 
+        function updateAdminSearch(val) {
+            state.adminSearchQuery = val || "";
+            render();
+            const input = document.getElementById('admin-search');
+            if (input) {
+                input.focus();
+                const len = input.value.length;
+                input.setSelectionRange(len, len);
+            }
+        }
+
+        function downloadAdminCSV() {
+            const headers = (state.adminHeaders && state.adminHeaders.length > 0)
+                ? state.adminHeaders
+                : ['담당 그룹', '직책/구분', '이름', '연락처'];
+            const query = (state.adminSearchQuery || '').trim().toLowerCase();
+            const list = (state.admins || []).filter(a => {
+                if (!query) return true;
+                const cells = Array.isArray(a.cells) ? a.cells : [a.group, a.role, a.name, a.phone];
+                return cells.some(c => String(c || '').toLowerCase().includes(query));
+            });
+            if (list.length === 0) return showToast('다운로드할 관리자 명단이 없습니다.', 'error');
+
+            const esc = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+            let csvContent = "\uFEFF" + headers.map(esc).join(",") + "\n";
+            list.forEach(a => {
+                const cells = Array.isArray(a.cells) ? a.cells : [a.group, a.role, a.name, a.phone];
+                csvContent += headers.map((_, idx) => esc(cells[idx])).join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(blob));
+            link.setAttribute("download", `K-브랜드캠프_관리자명단_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('관리자 명단 CSV 파일이 다운로드되었습니다.', 'success');
+        }
+
         function downloadCSV() {
             const filterType = state.applicantFilter || 'all';
-            let filteredApps = (state.applicants || []).filter(a => { 
+            const query = (state.searchQuery || '').trim().toLowerCase();
+
+            const filteredApps = (state.applicants || []).filter(a => {
                 let matchFilter = true;
-                if (filterType === 'selected') matchFilter = a.isSelected; 
-                if (filterType === 'waiting') matchFilter = !a.isSelected; 
+                if (filterType === 'selected') matchFilter = a.isSelected;
+                else if (filterType === 'waiting') matchFilter = !a.isSelected;
+
                 let matchSearch = true;
-                if (state.searchQuery) {
-                    const query = state.searchQuery.toLowerCase();
-                    matchSearch = (a.korName || "").toLowerCase().includes(query) || (a.engName || "").toLowerCase().includes(query) || (a.phone || "").includes(query) || (a.affiliation || "").toLowerCase().includes(query);
+                if (query) {
+                    matchSearch = (a.korName || '').toLowerCase().includes(query)
+                        || (a.engName || '').toLowerCase().includes(query)
+                        || (a.nationality || '').toLowerCase().includes(query)
+                        || (a.phone || '').toLowerCase().includes(query)
+                        || (a.affiliation || '').toLowerCase().includes(query)
+                        || (a.email || '').toLowerCase().includes(query);
                 }
                 return matchFilter && matchSearch;
             });
 
-            if(filteredApps.length === 0) return showToast('다운로드할 데이터가 없습니다.', 'error');
+            if (filteredApps.length === 0) return showToast('다운로드할 데이터가 없습니다.', 'error');
 
+            const esc = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
             let csvContent = "\uFEFF"; // 한글 깨짐 방지 BOM
             csvContent += "지원번호,국문이름,영문이름,국적,성별,생년월일,소속,연락처,이메일,한국어능력,상태,그룹,방배정,조편성\n";
-            
+
             filteredApps.forEach(a => {
                 const row = [
-                    a.id, 
-                    `"${a.korName || ''}"`, 
-                    `"${a.engName || ''}"`,
-                    `"${a.nationality || ''}"`, 
-                    a.gender || '', 
-                    a.dob || '',
-                    `"${a.affiliation || ''}"`, 
-                    a.phone || '', 
-                    a.email || '', 
-                    a.korean || '',
-                    a.isSelected ? '선정' : '대기',
-                    a.group || '미배정', 
-                    a.room || '미배정', 
-                    a.team || '미배정'
+                    esc(a.id),
+                    esc(a.korName),
+                    esc(a.engName),
+                    esc(a.nationality),
+                    esc(a.gender),
+                    esc(a.dob),
+                    esc(a.affiliation),
+                    esc(a.phone),
+                    esc(a.email),
+                    esc(a.korean),
+                    esc(a.isSelected ? '선정' : '대기'),
+                    esc(a.group || '미배정'),
+                    esc(a.room || '미배정'),
+                    esc(a.team || '미배정')
                 ];
                 csvContent += row.join(",") + "\n";
             });
